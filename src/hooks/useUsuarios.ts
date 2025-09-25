@@ -1,328 +1,582 @@
 /**
- * Hook personalizado para gestión de usuarios
+ * Hook useUsuarios - VERSIÓN CORREGIDA SEGÚN PAYLOAD REAL
+ * Conecta con http://127.0.0.1:8000/api/personas/
+ * 
+ * CAMPOS DISPONIBLES EN BACKEND (confirmados):
+ * - id, nombre, apellido, nombre_completo
+ * - documento_identidad, telefono, email
+ * - tipo_persona, activo
+ * 
+ * CAMPOS QUE NO EXISTEN:
+ * - profesion ❌ (eliminar)
+ * - unidad ❌ (está en /api/viviendas/ o /api/propiedades/)
+ * - rol ❌ (usar tipo_persona)
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { authService } from '@/lib/services';
-import type { UsuarioSistema, UsuarioFilters, Rol, PaginatedResponse } from '../core/types';
+import { useAuth } from '@/contexts/auth-context';
+import type { UserRole } from '@/core/types';
 
-interface UseUsuariosReturn {
-  usuarios: UsuarioSistema[];
-  roles: Rol[];
-  loading: boolean;
-  error: string | null;
-  totalPages: number;
-  currentPage: number;
-  totalCount: number;
-  filters: UsuarioFilters;
-  setFilters: (filters: UsuarioFilters) => void;
-  refetch: () => Promise<void>;
-  crearUsuario: (userData: any) => Promise<boolean>;
-  actualizarUsuario: (id: number, userData: any) => Promise<boolean>;
-  eliminarUsuario: (id: number) => Promise<boolean>;
-  cambiarEstadoUsuario: (id: number, activo: boolean) => Promise<boolean>;
-}
+// Mapeo de tipo_persona a rol descriptivo
+const mapearTipoPersonaARol = (tipo: string) => {
+  const mapeo = {
+    'administrador': {
+      id: 1,
+      nombre: 'Administrador',
+      descripcion: 'Acceso completo al sistema',
+      activo: true
+    },
+    'propietario': {
+      id: 2, 
+      nombre: 'Propietario',
+      descripcion: 'Propietario de unidad',
+      activo: true
+    },
+    'inquilino': {
+      id: 3,
+      nombre: 'Inquilino', 
+      descripcion: 'Inquilino de unidad',
+      activo: true
+    },
+    'seguridad': {
+      id: 4,
+      nombre: 'Seguridad',
+      descripcion: 'Personal de seguridad',
+      activo: true
+    },
+    'cliente': {
+      id: 5,
+      nombre: 'Cliente',
+      descripcion: 'Cliente general',
+      activo: true
+    }
+  };
+  
+  return mapeo[tipo] || {
+    id: 0,
+    nombre: tipo,
+    descripcion: `Tipo: ${tipo}`,
+    activo: true
+  };
+};
 
-export function useUsuarios(): UseUsuariosReturn {
-  const [usuarios, setUsuarios] = useState<UsuarioSistema[]>([]);
-  const [roles, setRoles] = useState<Rol[]>([]);
+export function useUsuarios() {
+  const { user, login } = useAuth();
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [filters, setFilters] = useState<UsuarioFilters>({
-    page: 1,
-    page_size: 10
-  });
+  const [error, setError] = useState(null);
 
-  // Cargar usuarios (MOCK DATA - Backend no implementado)
-  const fetchUsuarios = useCallback(async () => {
+  const cargarUsuarios = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 useUsuarios: Cargando usuarios con MOCK DATA...', filters);
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Llamando a backend real: http://127.0.0.1:8000/api/personas/');
       
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // MOCK DATA - Simulando usuarios según la nueva estructura
-      const mockUsuarios: UsuarioSistema[] = [
-        {
-          id: 1,
-          email: "admin@facial.com",
-          estado: "ACTIVO",
-          created_at: "2025-09-23T10:30:00Z",
-          updated_at: "2025-09-23T15:45:00Z",
-          persona: {
-            id: 1,
-            nombre: "Juan Carlos",
-            apellido: "Pérez López",
-            documento_identidad: "12345678",
-            telefono: "71234567",
-            email: "admin@facial.com",
-            fecha_nacimiento: "1990-05-15",
-            genero: "masculino",
-            pais: "Bolivia",
-            tipo_persona: "administrador",
-            direccion: "Av. América #123",
-            edad: 35,
-            nombre_completo: "Juan Carlos Pérez López",
-            activo: true,
-            created_at: "2025-09-23T10:30:00Z",
-            updated_at: "2025-09-23T15:45:00Z"
-          },
-          roles: [
-            {
-              id: 1,
-              nombre: "Administrador",
-              descripcion: "Administrador del sistema",
-              activo: true,
-              created_at: "2025-09-23T10:00:00Z",
-              updated_at: "2025-09-23T10:00:00Z"
-            }
-          ],
-          nombres: "Juan Carlos",
-          apellidos: "Pérez López",
-          telefono: "71234567",
-          fecha_nacimiento: "1990-05-15",
-          genero: "masculino"
-        },
-        {
-          id: 2,
-          email: "ana.garcia@facial.com",
-          estado: "ACTIVO",
-          created_at: "2025-09-20T08:15:00Z",
-          updated_at: "2025-09-23T12:30:00Z",
-          persona: {
-            id: 2,
-            nombre: "Ana María",
-            apellido: "García Silva",
-            documento_identidad: "87654321",
-            telefono: "72345678",
-            email: "ana.garcia@facial.com",
-            fecha_nacimiento: "1985-08-22",
-            genero: "femenino",
-            pais: "Bolivia",
-            tipo_persona: "propietario",
-            direccion: "Calle Libertad #456",
-            edad: 40,
-            nombre_completo: "Ana María García Silva",
-            activo: true,
-            created_at: "2025-09-20T08:15:00Z",
-            updated_at: "2025-09-23T12:30:00Z"
-          },
-          roles: [
-            {
-              id: 2,
-              nombre: "Propietario",
-              descripcion: "Propietario de vivienda",
-              activo: true,
-              created_at: "2025-09-20T08:00:00Z",
-              updated_at: "2025-09-20T08:00:00Z"
-            }
-          ],
-          nombres: "Ana María",
-          apellidos: "García Silva",
-          telefono: "72345678",
-          fecha_nacimiento: "1985-08-22",
-          genero: "femenino"
-        },
-        {
-          id: 3,
-          email: "carlos.lopez@facial.com",
-          estado: "INACTIVO",
-          created_at: "2025-09-18T14:20:00Z",
-          updated_at: "2025-09-22T09:45:00Z",
-          persona: {
-            id: 3,
-            nombre: "Carlos Alberto",
-            apellido: "López Morales",
-            documento_identidad: "11223344",
-            telefono: "73456789",
-            email: "carlos.lopez@facial.com",
-            fecha_nacimiento: "1992-03-10",
-            genero: "masculino",
-            pais: "Bolivia",
-            tipo_persona: "inquilino",
-            direccion: "Av. 6 de Agosto #789",
-            edad: 33,
-            nombre_completo: "Carlos Alberto López Morales",
-            activo: false,
-            created_at: "2025-09-18T14:20:00Z",
-            updated_at: "2025-09-22T09:45:00Z"
-          },
-          roles: [
-            {
-              id: 3,
-              nombre: "Inquilino",
-              descripcion: "Inquilino de vivienda",
-              activo: true,
-              created_at: "2025-09-18T14:00:00Z",
-              updated_at: "2025-09-18T14:00:00Z"
-            }
-          ],
-          nombres: "Carlos Alberto",
-          apellidos: "López Morales",
-          telefono: "73456789",
-          fecha_nacimiento: "1992-03-10",
-          genero: "masculino"
+      const response = await fetch('http://127.0.0.1:8000/api/personas/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      ];
+      });
 
-      // Simular filtros
-      let filteredUsuarios = mockUsuarios;
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Token expirado. Inicia sesión nuevamente.');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Respuesta del backend:', data);
       
-      if (filters.search) {
-        filteredUsuarios = filteredUsuarios.filter(u => 
-          u.persona.nombre_completo.toLowerCase().includes(filters.search!.toLowerCase()) ||
-          u.email.toLowerCase().includes(filters.search!.toLowerCase())
-        );
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('🔍 Campos disponibles en primera persona:', Object.keys(data[0]));
+        console.log('🔍 Ejemplo persona completa:', data[0]);
       }
 
-      if (filters.role) {
-        filteredUsuarios = filteredUsuarios.filter(u => 
-          u.roles.some(r => r.nombre.toLowerCase() === filters.role!.toLowerCase())
-        );
-      }
+      // Transformar datos del backend al formato del frontend
+      const usuariosTransformados = data.map(persona => {
+        const rolInfo = mapearTipoPersonaARol(persona.tipo_persona);
+        
+        return {
+          // IDs
+          id: persona.id,
+          
+          // Información personal (campos reales del backend)
+          email: persona.email,
+          nombres: persona.nombre,
+          apellidos: persona.apellido,
+          telefono: persona.telefono || 'N/A',
+          documento_identidad: persona.documento_identidad,
+          
+          // Estado
+          estado: persona.activo ? 'ACTIVO' : 'INACTIVO',
+          activo: persona.activo,
+          
+          // Rol mapeado desde tipo_persona
+          rol: rolInfo,
+          
+          // Fechas (no disponibles en este endpoint, usar valores por defecto)
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          fecha_registro: new Date().toISOString(),
 
-      if (filters.is_active !== undefined) {
-        filteredUsuarios = filteredUsuarios.filter(u => 
-          (filters.is_active && u.estado === 'ACTIVO') || 
-          (!filters.is_active && u.estado === 'INACTIVO')
-        );
-      }
+          // Datos de la persona
+          persona: {
+            id: persona.id,
+            nombre: persona.nombre,
+            apellido: persona.apellido,
+            nombre_completo: persona.nombre_completo,
+            documento_identidad: persona.documento_identidad,
+            telefono: persona.telefono,
+            email: persona.email,
+            tipo_persona: persona.tipo_persona,
+            activo: persona.activo
+          },
+          
+          // Array de roles para compatibilidad
+          roles: [rolInfo]
+        };
+      });
 
-      // Simular paginación
-      const pageSize = filters.page_size || 10;
-      const currentPage = filters.page || 1;
-      const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedUsuarios = filteredUsuarios.slice(startIndex, endIndex);
-
-      setUsuarios(paginatedUsuarios);
-      setTotalCount(filteredUsuarios.length);
-      setTotalPages(Math.ceil(filteredUsuarios.length / pageSize));
-      setCurrentPage(currentPage);
+      setUsuarios(usuariosTransformados);
+      console.log(`✅ useUsuarios: ${usuariosTransformados.length} usuarios cargados desde backend REAL`);
       
-      console.log('✅ useUsuarios: MOCK usuarios cargados exitosamente:', paginatedUsuarios.length);
-    } catch (err: any) {
-      console.error('❌ useUsuarios: Error cargando usuarios:', err);
-      setError(err.message || 'Error al cargar usuarios');
+    } catch (err) {
+      console.error('❌ Error cargando usuarios:', err);
+      setError(err.message || 'Error desconocido');
       setUsuarios([]);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
-  // Cargar roles disponibles (MOCK DATA - Backend no implementado)
-  const fetchRoles = useCallback(async () => {
+  useEffect(() => {
+    cargarUsuarios();
+  }, [cargarUsuarios]);
+
+  // Funciones adicionales para compatibilidad
+  const refetch = cargarUsuarios;
+  const recargar = cargarUsuarios;
+
+  const crearUsuario = async (userData) => {
     try {
-      console.log('🔄 useUsuarios: Cargando roles con MOCK DATA...');
-      
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // MOCK DATA - Roles de prueba
-      const mockRoles: Rol[] = [
-        {
-          id: 1,
-          nombre: "Administrador",
-          descripcion: "Administrador del sistema",
-          activo: true,
-          created_at: "2025-09-23T10:00:00Z",
-          updated_at: "2025-09-23T10:00:00Z"
-        },
-        {
-          id: 2,
-          nombre: "Propietario",
-          descripcion: "Propietario de vivienda",
-          activo: true,
-          created_at: "2025-09-20T08:00:00Z",
-          updated_at: "2025-09-20T08:00:00Z"
-        },
-        {
-          id: 3,
-          nombre: "Inquilino",
-          descripcion: "Inquilino de vivienda",
-          activo: true,
-          created_at: "2025-09-18T14:00:00Z",
-          updated_at: "2025-09-18T14:00:00Z"
-        },
-        {
-          id: 4,
-          nombre: "Empleado",
-          descripcion: "Empleado del condominio",
-          activo: true,
-          created_at: "2025-09-15T12:00:00Z",
-          updated_at: "2025-09-15T12:00:00Z"
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Creando usuario completo:', userData);
+
+      // Verificar si es un usuario completo (con credenciales) o solo persona
+      if (userData.usuario && userData.persona) {
+        // OPCIÓN 1: Usuario completo con credenciales
+        console.log('👤 Creando usuario del sistema con credenciales...');
+        
+        // Paso 1: Crear la persona primero
+        const datosPersona = {
+          nombre: userData.persona.nombre,
+          apellido: userData.persona.apellido,
+          documento_identidad: userData.persona.documento_identidad,
+          telefono: userData.persona.telefono,
+          email: userData.persona.email,
+          tipo_persona: userData.persona.tipo_persona,
+          activo: userData.persona.activo !== false
+        };
+
+        const responsePersona = await fetch('http://127.0.0.1:8000/api/personas/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(datosPersona)
+        });
+
+        if (!responsePersona.ok) {
+          const errorData = await responsePersona.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error creando persona: HTTP ${responsePersona.status}`);
         }
-      ];
+
+        const nuevaPersona = await responsePersona.json();
+        console.log('✅ Persona creada:', nuevaPersona);
+
+        // Paso 2: Crear usuario del sistema con credenciales
+        const datosUsuario = {
+          username: userData.usuario.username,
+          password: userData.usuario.password,
+          email: userData.usuario.email,
+          is_active: userData.usuario.is_active,
+          is_staff: userData.usuario.is_staff,
+          persona_id: nuevaPersona.id // Vincular con la persona creada
+        };
+
+        console.log('🔐 Creando credenciales de acceso...');
+        const responseUsuario = await fetch('http://127.0.0.1:8000/api/usuarios/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(datosUsuario)
+        });
+
+        if (!responseUsuario.ok) {
+          // Si falla la creación del usuario, intentar eliminar la persona creada
+          console.warn('⚠️ Error creando usuario, intentando limpiar persona creada...');
+          try {
+            await fetch(`http://127.0.0.1:8000/api/personas/${nuevaPersona.id}/`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+          } catch (cleanupErr) {
+            console.error('Error en cleanup:', cleanupErr);
+          }
+          
+          const errorData = await responseUsuario.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error creando usuario: HTTP ${responseUsuario.status}`);
+        }
+
+        const nuevoUsuario = await responseUsuario.json();
+        console.log('✅ Usuario del sistema creado:', nuevoUsuario);
+
+      } else {
+        // OPCIÓN 2: Solo crear persona (compatibilidad con versión anterior)
+        console.log('📄 Creando solo persona (sin credenciales)...');
+        
+        const datosPersona = {
+          nombre: userData.nombre || userData.persona?.nombre,
+          apellido: userData.apellido || userData.persona?.apellido,
+          documento_identidad: userData.documento_identidad || userData.persona?.documento_identidad,
+          telefono: userData.telefono || userData.persona?.telefono,
+          email: userData.email || userData.persona?.email,
+          tipo_persona: userData.tipo_persona || userData.persona?.tipo_persona,
+          activo: (userData.activo !== false) && (userData.persona?.activo !== false)
+        };
+
+        const response = await fetch('http://127.0.0.1:8000/api/personas/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(datosPersona)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const nuevaPersona = await response.json();
+        console.log('✅ Persona creada (sin credenciales):', nuevaPersona);
+      }
       
-      setRoles(mockRoles);
-      console.log(`✅ useUsuarios: ${mockRoles.length} roles MOCK cargados`);
-    } catch (err: any) {
-      console.error('❌ useUsuarios: Error cargando roles:', err);
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error creando usuario:', err);
+      setError(err.message || 'Error creando usuario');
+      return false;
     }
-  }, []);
+  };
 
-  // Crear usuario (NO IMPLEMENTADO - Backend no tiene endpoint)
-  const crearUsuario = useCallback(async (userData: any): Promise<boolean> => {
-    console.log('⚠️ useUsuarios: Crear usuario NO IMPLEMENTADO - Backend no tiene endpoint');
-    setError('Funcionalidad no disponible: El backend no tiene endpoint para crear usuarios');
-    return false;
-  }, []);
+  const actualizarUsuario = async (id, userData) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
 
-  // Actualizar usuario (NO IMPLEMENTADO - Backend no tiene endpoint)
-  const actualizarUsuario = useCallback(async (id: number, userData: any): Promise<boolean> => {
-    console.log('⚠️ useUsuarios: Actualizar usuario NO IMPLEMENTADO - Backend no tiene endpoint');
-    setError('Funcionalidad no disponible: El backend no tiene endpoint para actualizar usuarios');
-    return false;
-  }, []);
+      console.log('🚀 Actualizando usuario:', id, userData);
 
-  // Eliminar usuario (NO IMPLEMENTADO - Backend no tiene endpoint)
-  const eliminarUsuario = useCallback(async (id: number): Promise<boolean> => {
-    console.log('⚠️ useUsuarios: Eliminar usuario NO IMPLEMENTADO - Backend no tiene endpoint');
-    setError('Funcionalidad no disponible: El backend no tiene endpoint para eliminar usuarios');
-    return false;
-  }, []);
+      // Preparar datos según la documentación del backend CRUD
+      const datosPersona = {
+        nombre: userData.nombre,
+        apellido: userData.apellido,
+        documento_identidad: userData.documento_identidad,
+        telefono: userData.telefono || '',
+        email: userData.email,
+        tipo_persona: userData.tipo_persona,
+        activo: userData.activo
+      };
 
-  // Cambiar estado usuario (NO IMPLEMENTADO - Backend no tiene endpoint)
-  const cambiarEstadoUsuario = useCallback(async (id: number, activo: boolean): Promise<boolean> => {
-    console.log('⚠️ useUsuarios: Cambiar estado usuario NO IMPLEMENTADO - Backend no tiene endpoint');
-    setError('Funcionalidad no disponible: El backend no tiene endpoint para cambiar estado de usuarios');
-    return false;
-  }, []);
+      console.log('📝 Datos a enviar:', datosPersona);
 
-  // Refetch función
-  const refetch = useCallback(async () => {
-    await fetchUsuarios();
-  }, [fetchUsuarios]);
+      // Usar PATCH que ahora está implementado en el backend CRUD
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(datosPersona)
+      });
 
-  // Efectos
-  useEffect(() => {
-    fetchUsuarios();
-  }, [fetchUsuarios]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
-  useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
+      const personaActualizada = await response.json();
+      console.log('✅ Usuario actualizado:', personaActualizada);
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error actualizando usuario:', err);
+      setError(err.message || 'Error actualizando usuario');
+      return false;
+    }
+  };
+
+  const eliminarUsuario = async (id) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Eliminando usuario (lógico):', id);
+
+      // Eliminación lógica: cambiar activo a false
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ activo: false })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Usuario eliminado (lógicamente)');
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error eliminando usuario:', err);
+      setError(err.message || 'Error eliminando usuario');
+      return false;
+    }
+  };
+
+  const cambiarEstadoUsuario = async (id, activo) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Cambiando estado usuario:', id, activo);
+
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ activo })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Estado cambiado');
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error cambiando estado:', err);
+      setError(err.message || 'Error cambiando estado');
+      return false;
+    }
+  };
+
+  const verUsuario = async (id) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Obteniendo usuario:', id);
+
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${id}/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const persona = await response.json();
+      console.log('✅ Usuario obtenido:', persona);
+      
+      // Transformar a formato del frontend
+      const rolInfo = mapearTipoPersonaARol(persona.tipo_persona);
+      return {
+        id: persona.id,
+        email: persona.email,
+        nombres: persona.nombre,
+        apellidos: persona.apellido,
+        telefono: persona.telefono || 'N/A',
+        documento_identidad: persona.documento_identidad,
+        estado: persona.activo ? 'ACTIVO' : 'INACTIVO',
+        activo: persona.activo,
+        rol: rolInfo,
+        persona: persona,
+        roles: [rolInfo]
+      };
+
+    } catch (err) {
+      console.error('❌ Error obteniendo usuario:', err);
+      setError(err.message || 'Error obteniendo usuario');
+      return null;
+    }
+  };
+
+  const editarUsuario = async (id, userData) => {
+    // Alias para actualizarUsuario
+    return await actualizarUsuario(id, userData);
+  };
+
+  const transferirPropiedad = async (inquilinoId, accionPropietarioAnterior = 'desactivar') => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🏠 Transfiriendo propiedad:', inquilinoId, accionPropietarioAnterior);
+
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${inquilinoId}/transferir_propiedad/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          accion_propietario_anterior: accionPropietarioAnterior
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+      console.log('✅ Transferencia completada:', resultado);
+      
+      // Si el usuario transferido es el usuario actual, actualizar su información de sesión
+      if (user && user.id === inquilinoId) {
+        console.log('🔄 Actualizando usuario actual después de transferencia');
+        const usuarioActualizado = {
+          ...user,
+          role: 'propietario' as UserRole,
+          tipo_persona: 'propietario'
+        };
+        login(usuarioActualizado);
+        console.log('✅ Usuario actual actualizado a propietario');
+      }
+      
+      // Recargar la lista para reflejar cambios
+      await cargarUsuarios();
+      return resultado;
+
+    } catch (err) {
+      console.error('❌ Error transfiriendo propiedad:', err);
+      setError(err.message || 'Error transfiriendo propiedad');
+      return null;
+    }
+  };
+
+  const cambiarTipoPersona = async (id, nuevoTipo) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🔄 Cambiando tipo de persona:', id, nuevoTipo);
+
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${id}/cambiar_tipo/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tipo_persona: nuevoTipo
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+      console.log('✅ Tipo cambiado:', resultado);
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return resultado;
+
+    } catch (err) {
+      console.error('❌ Error cambiando tipo:', err);
+      setError(err.message || 'Error cambiando tipo');
+      return false;
+    }
+  };
 
   return {
     usuarios,
-    roles,
     loading,
     error,
-    totalPages,
-    currentPage,
-    totalCount,
-    filters,
-    setFilters,
     refetch,
+    recargar,
     crearUsuario,
     actualizarUsuario,
     eliminarUsuario,
     cambiarEstadoUsuario,
+    verUsuario,
+    editarUsuario,
+    transferirPropiedad,
+    cambiarTipoPersona,
+    // Compatibilidad adicional
+    roles: [],
+    totalPages: 1,
+    currentPage: 1,
+    totalCount: usuarios.length,
+    filters: { page: 1, page_size: 10 },
+    setFilters: () => {}
   };
 }

@@ -20,6 +20,10 @@ export interface RegistroInquilinoData {
   fecha_nacimiento: string;
   genero: 'M' | 'F';
   
+  // Credenciales de acceso
+  username?: string;
+  password?: string;
+  
   // Información del contrato
   vivienda_id?: number;
   fecha_inicio: string;
@@ -48,6 +52,11 @@ export interface InquilinoRegistrado {
   observaciones?: string;
 }
 
+export interface InquilinosListResponse {
+  count: number;
+  inquilinos: InquilinoRegistrado[];
+}
+
 // ============================================================================
 // SERVICIOS DE INQUILINOS
 // ============================================================================
@@ -61,35 +70,75 @@ export async function registrarInquilino(
   console.log('📝 Inquilinos: Registrando inquilino...', data.email);
   
   try {
-    // Transformar datos al formato esperado por el backend según la guía actualizada
+    // Generar credenciales si no se proporcionaron
+    const username = data.username || data.email;
+    const password = data.password || generateTemporaryPassword();
+    
+    console.log('🔥 Registrando inquilino con datos:', { 
+      ...data, 
+      credenciales: { username, password } 
+    });
+    
+    // Transformar datos al formato esperado por el backend corregido
     const payload = {
-      persona: {
-        nombre: data.nombre,
-        apellido: data.apellido,
-        documento_identidad: data.documento_identidad,
-        fecha_nacimiento: data.fecha_nacimiento,
-        telefono: data.telefono,
-        email: data.email,
-        genero: data.genero,
-      },
-      vivienda_id: data.vivienda_id || 15, // Valor por defecto o del contexto del propietario
+      // Datos personales básicos
+      nombre: data.nombre,
+      apellido: data.apellido,
+      documento_identidad: data.documento_identidad,
+      fecha_nacimiento: data.fecha_nacimiento,
+      telefono: data.telefono,
+      email: data.email,
+      genero: data.genero,
+      // Credenciales (requeridas por el backend actualizado)
+      password: password,
+      confirm_password: password,
+      // Datos del contrato
       fecha_inicio: data.fecha_inicio,
       fecha_fin: data.fecha_fin || null,
       monto_alquiler: data.monto_alquiler,
       observaciones: data.observaciones || '',
+      // Datos de la vivienda si están disponibles
+      ...(data.vivienda_id && { vivienda_id: data.vivienda_id })
     };
 
-    // Usar endpoint correcto según la guía
+    console.log('🔐 Inquilinos: Credenciales generadas para inquilino:', { username, password });
+    console.log('📦 Inquilinos: Payload enviado al backend:', JSON.stringify(payload, null, 2));
+    console.log('🌐 Inquilinos: URL del endpoint:', '/authz/propietarios/panel/inquilinos/');
+    console.log('🔑 Inquilinos: Token de autorización:', 
+      localStorage.getItem('access_token') ? 'Token encontrado' : 'NO HAY TOKEN',
+      localStorage.getItem('access_token')?.substring(0, 50) + '...'
+    );
+
+    // Usar endpoint real - el backend ya corrigió el error tipo_usuario
+    console.log('🔄 Inquilinos: Enviando al backend corregido...');
     const response = await apiClient.post<InquilinoRegistrado>(
-      '/api/authz/propietarios/panel/inquilinos/',
+      '/authz/propietarios/panel/inquilinos/',
       payload
     );
+
+    console.log('📋 Inquilinos: Respuesta del backend:', response);
+
+    // Verificar si la respuesta es exitosa
+    if (!response.success) {
+      console.error('❌ Inquilinos: Error del backend:', response.message);
+      console.error('❌ Inquilinos: Errores de validación:', response.errors);
+      
+      // Crear error con información detallada del backend
+      const error = new Error(response.message || 'Error registrando inquilino');
+      (error as any).errors = response.errors;
+      throw error;
+    }
 
     console.log('✅ Inquilinos: Inquilino registrado exitosamente');
     return response;
     
   } catch (error) {
     console.error('❌ Inquilinos: Error registrando inquilino:', error);
+    if (error instanceof Error) {
+      console.error('❌ Inquilinos: Mensaje de error:', error.message);
+      console.error('❌ Inquilinos: Stack trace:', error.stack);
+    }
+    console.error('❌ Inquilinos: Error completo:', JSON.stringify(error, null, 2));
     throw error;
   }
 }
@@ -101,13 +150,17 @@ export async function getInquilinosPropios(): Promise<ApiResponse<InquilinoRegis
   console.log('📝 Inquilinos: Obteniendo inquilinos propios...');
   
   try {
-    // Usar endpoint correcto según la guía actualizada
-    const response = await apiClient.get<InquilinoRegistrado[]>(
-      '/api/authz/propietarios/panel/inquilinos/'
+    // Usar endpoint correcto - sin /api inicial porque ya está en BASE_URL
+    const response = await apiClient.get<InquilinosListResponse>(
+      '/authz/propietarios/panel/inquilinos/'
     );
 
     console.log('✅ Inquilinos: Lista de inquilinos obtenida');
-    return response;
+    // Extraer solo el array de inquilinos de la respuesta
+    return {
+      ...response,
+      data: response.data.inquilinos
+    };
     
   } catch (error) {
     console.error('❌ Inquilinos: Error obteniendo inquilinos:', error);
@@ -131,7 +184,7 @@ export async function actualizarInquilino(
     };
 
     const response = await apiClient.put<InquilinoRegistrado>(
-      `/api/authz/inquilinos/${inquilinoId}/`,
+      `/authz/propietarios/panel/inquilinos/${inquilinoId}/`,
       payload
     );
 
@@ -152,7 +205,7 @@ export async function desactivarInquilino(inquilinoId: number): Promise<ApiRespo
   
   try {
     const response = await apiClient.patch<void>(
-      `/api/authz/inquilinos/${inquilinoId}/desactivar/`
+      `/authz/propietarios/panel/inquilinos/${inquilinoId}/desactivar/`
     );
 
     console.log('✅ Inquilinos: Inquilino desactivado exitosamente');
@@ -170,8 +223,13 @@ export async function desactivarInquilino(inquilinoId: number): Promise<ApiRespo
 
 /**
  * Genera una contraseña temporal para el inquilino
- * En un sistema real, esto se haría en el backend
+ * Combina letras y números para mayor seguridad
  */
 function generateTemporaryPassword(): string {
-  return Math.random().toString(36).slice(-8);
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 }

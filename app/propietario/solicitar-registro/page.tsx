@@ -3,7 +3,7 @@
  * Solo accesible para usuarios autenticados con rol de propietario
  */
 
-import { RegistroInquilinoFormActualizado } from '@/components/inquilinos/registro-inquilino-form-actualizado';
+import { RegistroInquilinoForm } from '@/components/inquilinos/registro-inquilino-form';
 
 export default function RegistrarInquilinoPage() {
   return (
@@ -12,12 +12,12 @@ export default function RegistrarInquilinoPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight">Registrar Nuevo Inquilino</h1>
           <p className="text-muted-foreground">
-            Complete el formulario para registrar un inquilino en una de sus propiedades.
-            El inquilino será registrado directamente en el sistema.
+            Formulario unificado para registrar inquilinos con credenciales y foto para control de acceso.
+            Usado por todos los propietarios del sistema.
           </p>
         </div>
         
-        <RegistroInquilinoFormActualizado />
+        <RegistroInquilinoForm />
       </div>
     </div>
   );

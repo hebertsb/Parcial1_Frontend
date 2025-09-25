@@ -9,6 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useUsuarios } from "@/hooks/useUsuarios"
+import { VerUsuario } from "@/components/admin/VerUsuario_v2"
+import { EditarUsuario } from "@/components/admin/EditarUsuario_v2"
+import { EliminarUsuario } from "@/components/admin/EliminarUsuario_v2"
+import { CrearUsuario } from "@/components/admin/CrearUsuario_v3"
 import {
   Search,
   Filter,
@@ -25,11 +29,20 @@ import {
   User,
   CheckCircle,
   XCircle,
+  Users,
+  RefreshCw,
 } from "lucide-react"
 
 export function UsuariosManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedRows, setSelectedRows] = useState<number[]>([])
+  
+  // Estados para modales
+  const [verModalOpen, setVerModalOpen] = useState(false)
+  const [editarModalOpen, setEditarModalOpen] = useState(false)
+  const [eliminarModalOpen, setEliminarModalOpen] = useState(false)
+  const [crearModalOpen, setCrearModalOpen] = useState(false)
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<number | null>(null)
   
   // Hook personalizado para gestión de usuarios
   const {
@@ -43,8 +56,13 @@ export function UsuariosManagement() {
     filters,
     setFilters,
     refetch,
+    crearUsuario,
+    actualizarUsuario,
+    eliminarUsuario,
     cambiarEstadoUsuario,
-    eliminarUsuario
+    verUsuario,
+    editarUsuario,
+    transferirPropiedad
   } = useUsuarios();
 
   // Función para actualizar búsqueda
@@ -92,8 +110,17 @@ export function UsuariosManagement() {
 
   // Función para obtener unidad principal
   const getUnidadPrincipal = (usuario: any) => {
-    if (!usuario.propiedades || usuario.propiedades.length === 0) return 'Sin unidad';
-    return usuario.propiedades[0].vivienda.numero_casa;
+    // Primero intentar con los nuevos campos del backend
+    if (usuario.unit_number && usuario.unit_number !== 'Sin unidad') {
+      return usuario.unit_number;
+    }
+    
+    // Fallback a estructura anterior
+    if (usuario.propiedades && usuario.propiedades.length > 0) {
+      return usuario.propiedades[0].vivienda?.numero_casa || 'Sin unidad';
+    }
+    
+    return 'Sin unidad';
   };
 
   // Función para formatear fecha
@@ -107,6 +134,64 @@ export function UsuariosManagement() {
     const nombre = formatNombreCompleto(usuario);
     return nombre.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'US';
   };
+
+  // Funciones para manejar modales
+  const handleVerUsuario = (id: number) => {
+    setUsuarioSeleccionado(id)
+    setVerModalOpen(true)
+  }
+
+  const handleEditarUsuario = (id: number) => {
+    setUsuarioSeleccionado(id)
+    setEditarModalOpen(true)
+  }
+
+  const handleEliminarUsuario = (id: number) => {
+    setUsuarioSeleccionado(id)
+    setEliminarModalOpen(true)
+  }
+
+  const handleCrearUsuario = () => {
+    setCrearModalOpen(true)
+  }
+
+  // Función para cambiar estado con confirmación
+  const handleCambiarEstado = async (id: number, activar: boolean) => {
+    const accion = activar ? 'activar' : 'desactivar'
+    if (confirm(`¿Estás seguro de ${accion} este usuario?`)) {
+      await cambiarEstadoUsuario(id, activar)
+    }
+  }
+
+  // Función para obtener color del estado
+  const obtenerColorEstado = (estado: string) => {
+    switch (estado?.toUpperCase()) {
+      case 'ACTIVO':
+        return 'bg-green-600 text-white hover:bg-green-700'
+      case 'INACTIVO':
+        return 'bg-red-600 text-white hover:bg-red-700'
+      case 'PENDIENTE':
+        return 'bg-yellow-600 text-white hover:bg-yellow-700'
+      default:
+        return 'bg-gray-600 text-white hover:bg-gray-700'
+    }
+  }
+
+  // Función para obtener color del rol
+  const obtenerColorRol = (rol: string) => {
+    switch (rol?.toLowerCase()) {
+      case 'propietario':
+        return 'bg-blue-600 text-white hover:bg-blue-700'
+      case 'inquilino':
+        return 'bg-purple-600 text-white hover:bg-purple-700'
+      case 'administrador':
+        return 'bg-orange-600 text-white hover:bg-orange-700'
+      case 'usuario':
+        return 'bg-gray-600 text-white hover:bg-gray-700'
+      default:
+        return 'bg-gray-600 text-white hover:bg-gray-700'
+    }
+  }
 
   // Mostrar estado de carga
   if (loading) {
@@ -145,9 +230,22 @@ export function UsuariosManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Usuarios</h1>
-        <p className="text-gray-400 text-sm mt-1">Gestión de usuarios del condominio</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white flex items-center gap-2">
+            <Users className="h-6 w-6" />
+            Gestión de Usuarios
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Administrar propietarios, inquilinos y usuarios del sistema
+          </p>
+        </div>
+        {totalCount > 0 && (
+          <div className="text-right">
+            <p className="text-white font-medium">{totalCount}</p>
+            <p className="text-gray-400 text-sm">Usuarios registrados</p>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
@@ -156,15 +254,20 @@ export function UsuariosManagement() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Buscar..."
+              placeholder="Buscar usuarios..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-80 bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder-gray-400 pl-10"
             />
           </div>
-          <Button variant="outline" className="bg-[#1a1a1a] border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">
-            <Filter className="w-4 h-4 mr-2" />
-            Columnas
+          <Button 
+            variant="outline" 
+            className="bg-[#1a1a1a] border-[#2a2a2a] text-white hover:bg-[#2a2a2a]"
+            onClick={refetch}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
           </Button>
         </div>
         <div className="flex items-center space-x-2">
@@ -172,9 +275,12 @@ export function UsuariosManagement() {
             <Download className="w-4 h-4 mr-2" />
             Exportar CSV
           </Button>
-          <Button className="bg-white text-black hover:bg-gray-200">
+          <Button 
+            className="bg-white text-black hover:bg-gray-200"
+            onClick={handleCrearUsuario}
+          >
             <Plus className="w-4 h-4 mr-2" />
-            Agregar Usuario
+            Nuevo Usuario
           </Button>
         </div>
       </div>
@@ -187,12 +293,11 @@ export function UsuariosManagement() {
               <TableHead className="text-gray-300 font-medium">Nombre</TableHead>
               <TableHead className="text-gray-300 font-medium">Email</TableHead>
               <TableHead className="text-gray-300 font-medium">Teléfono</TableHead>
-              <TableHead className="text-gray-300 font-medium">Rol</TableHead>
-              <TableHead className="text-gray-300 font-medium">Unidad</TableHead>
-              <TableHead className="text-gray-300 font-medium">Profesión</TableHead>
+              <TableHead className="text-gray-300 font-medium">Tipo</TableHead>
+              <TableHead className="text-gray-300 font-medium">Documento</TableHead>
               <TableHead className="text-gray-300 font-medium">Estado</TableHead>
               <TableHead className="text-gray-300 font-medium">Fecha Registro</TableHead>
-              <TableHead className="text-gray-300 font-medium w-12"></TableHead>
+              <TableHead className="text-gray-300 font-medium text-center w-32">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -212,67 +317,47 @@ export function UsuariosManagement() {
                 <TableCell className="text-gray-300">{usuario.email}</TableCell>
                 <TableCell className="text-gray-300">{usuario.persona?.telefono || usuario.telefono || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge
-                    variant={getRolPrincipal(usuario) === "Propietario" ? "default" : "secondary"}
-                    className={
-                      getRolPrincipal(usuario) === "Propietario"
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "bg-gray-600 text-white hover:bg-gray-700"
-                    }
-                  >
+                  <Badge className={obtenerColorRol(getRolPrincipal(usuario))}>
                     {getRolPrincipal(usuario)}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-gray-300 font-mono">{getUnidadPrincipal(usuario)}</TableCell>
-                <TableCell className="text-gray-300">N/A</TableCell>
+                <TableCell className="text-gray-300 font-mono">{usuario.persona?.documento_identidad || usuario.documento_identidad || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge
-                    variant={usuario.estado === 'ACTIVO' ? "default" : "destructive"}
-                    className={
-                      usuario.estado === 'ACTIVO'
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-red-600 text-white hover:bg-red-700"
-                    }
-                  >
-                    {usuario.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}
+                  <Badge className={obtenerColorEstado(usuario.estado)}>
+                    {usuario.estado}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-gray-300">{formatFecha(usuario.created_at)}</TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                      <DropdownMenuItem className="text-white hover:bg-[#2a2a2a]">
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver detalles
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-white hover:bg-[#2a2a2a]">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-blue-400 hover:bg-[#2a2a2a]"
-                        onClick={() => cambiarEstadoUsuario(usuario.id, usuario.estado !== 'ACTIVO')}
-                      >
-                        {usuario.estado === 'ACTIVO' ? 'Desactivar' : 'Activar'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-red-400 hover:bg-[#2a2a2a]"
-                        onClick={() => {
-                          if (confirm('¿Estás seguro de eliminar este usuario?')) {
-                            eliminarUsuario(usuario.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center justify-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-8 w-8 p-0"
+                      onClick={() => handleVerUsuario(usuario.id)}
+                      title="Ver detalles"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 h-8 w-8 p-0"
+                      onClick={() => handleEditarUsuario(usuario.id)}
+                      title="Editar usuario"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                      onClick={() => handleEliminarUsuario(usuario.id)}
+                      title="Eliminar usuario"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -311,6 +396,39 @@ export function UsuariosManagement() {
           </Button>
         </div>
       </div>
+
+      {/* Modales */}
+      <VerUsuario
+        usuarioId={usuarioSeleccionado}
+        open={verModalOpen}
+        onOpenChange={setVerModalOpen}
+        onObtener={verUsuario}
+        onEditar={handleEditarUsuario}
+        onEliminar={handleEliminarUsuario}
+      />
+
+      <EditarUsuario
+        usuarioId={usuarioSeleccionado}
+        open={editarModalOpen}
+        onOpenChange={setEditarModalOpen}
+        onEditar={editarUsuario}
+        onObtener={verUsuario}
+        onTransferirPropiedad={transferirPropiedad}
+      />
+
+      <EliminarUsuario
+        usuarioId={usuarioSeleccionado}
+        open={eliminarModalOpen}
+        onOpenChange={setEliminarModalOpen}
+        onEliminar={eliminarUsuario}
+        onObtener={verUsuario}
+      />
+
+      <CrearUsuario
+        open={crearModalOpen}
+        onOpenChange={setCrearModalOpen}
+        onCrear={crearUsuario}
+      />
     </div>
   )
 }

@@ -72,17 +72,29 @@ export function useInquilinos(): UseInquilinosReturn {
       setError(null);
 
       const response = await getInquilinosPropios();
+      console.log('🔍 useInquilinos: Respuesta completa:', response);
+      console.log('🔍 useInquilinos: Datos extraídos:', response.data);
+      console.log('🔍 useInquilinos: Tipo de datos:', typeof response.data, Array.isArray(response.data));
+      
       setInquilinos(response.data);
       
-      console.log('✅ useInquilinos: Inquilinos cargados exitosamente');
+      console.log('✅ useInquilinos: Inquilinos cargados exitosamente:', response.data.length, 'inquilinos');
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       console.error('❌ useInquilinos: Error cargando inquilinos:', errorMessage);
       setError(`Error al cargar inquilinos: ${errorMessage}`);
       
-      // En caso de error, usar datos mock para desarrollo
-      setInquilinos(getMockInquilinos());
+      // En caso de error en la primera carga, usar datos mock temporalmente
+      setInquilinos(prevInquilinos => {
+        if (prevInquilinos.length === 0) {
+          console.log('🔄 useInquilinos: Primera carga con error, usando datos mock temporalmente');
+          return getMockInquilinos();
+        } else {
+          console.log('🔄 useInquilinos: Error en recarga, manteniendo datos actuales');
+          return prevInquilinos;
+        }
+      });
     } finally {
       setIsLoading(false);
     }

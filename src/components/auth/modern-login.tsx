@@ -42,10 +42,14 @@ export function ModernLogin() {
           phone: response.data.user.phone,
           avatar: response.data.user.avatar
         }
+        console.log('🔓 Login: Usuario antes de llamar login():', frontendUser);
         login(frontendUser)
         
         // Redirección basada en el rol del usuario
         const dashboardRoute = getDashboardRoute(frontendUser.role as UserRole);
+        console.log(`🎯 Login: Usuario final:`, frontendUser);
+        console.log(`🎯 Login: Rol del usuario:`, frontendUser.role);
+        console.log(`🎯 Login: Ruta calculada:`, dashboardRoute);
         console.log(`🎯 Login: Redirigiendo ${frontendUser.role} a ${dashboardRoute}`);
         router.push(dashboardRoute)
       } else {

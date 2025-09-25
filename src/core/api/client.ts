@@ -3,10 +3,10 @@
  * Centralizes all API communication with Django backend
  */
 
-// Environment configuration
+// Environment configuration - ACTUALIZADO según informe del backend
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api',
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://127.0.0.1:8000/ws',
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
 } as const;
@@ -248,6 +248,7 @@ class ApiClient {
       // Handle HTTP errors but return ApiResponse format
       if (!processedResponse.ok) {
         console.log('❌ API Client: Error HTTP:', processedResponse.status);
+        console.log('❌ API Client: Detalles del error:', JSON.stringify(data, null, 2));
         return {
           success: false,
           message: data.detail || data.message || `HTTP Error: ${response.status}`,

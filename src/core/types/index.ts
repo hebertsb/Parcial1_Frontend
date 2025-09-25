@@ -118,6 +118,10 @@ export interface UsuarioSistema {
   telefono?: string;
   fecha_nacimiento?: string;
   genero: 'masculino' | 'femenino' | 'otro';
+  
+  // Campos adicionales para UI
+  unit_number?: string;
+  profession?: string;
 }
 
 // Rol del sistema (según nueva guía)

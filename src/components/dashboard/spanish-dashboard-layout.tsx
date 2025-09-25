@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Wrench,
   Search,
+  TestTube,
   Bell,
   Moon,
   User,
@@ -69,6 +70,8 @@ export function SpanishDashboardLayout({ children }: SpanishDashboardLayoutProps
         return [
           ...baseItems,
           { icon: Users, label: "Usuarios", href: "/admin/usuarios" },
+          { icon: Shield, label: "Personal Seguridad", href: "/admin/usuarios-seguridad" },
+          { icon: TestTube, label: "🧪 Test Seguridad", href: "/admin/test-seguridad" },
           { icon: Building2, label: "Unidades", href: "/admin/unidades" },
           { icon: CreditCard, label: "Finanzas", href: "/admin/finanzas", hasSubmenu: true },
           { icon: MessageSquare, label: "Comunicados", href: "/admin/comunicados" },
