@@ -8,6 +8,7 @@ import { type User, type AuthState, getCurrentUser, setCurrentUser, logoutUser }
 interface AuthContextType extends AuthState {
   login: (user: User) => void
   logout: () => Promise<void>
+  clearExpiredSession: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -23,6 +24,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🔄 AuthContext useEffect: Iniciando...');
     const user = getCurrentUser()
     console.log('👤 AuthContext useEffect: Usuario obtenido:', user);
+    
+    // Verificar si hay token y si está expirado
+    const token = localStorage.getItem('access_token') || localStorage.getItem('authToken')
+    if (token) {
+      try {
+        // Decodificar el JWT para verificar expiración
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        const now = Date.now() / 1000
+        
+        if (payload.exp && payload.exp < now) {
+          console.log('🚨 Token expirado, limpiando sesión...');
+          // Limpiar todos los tokens y datos de usuario
+          localStorage.removeItem('authToken')
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          localStorage.removeItem('user')
+          localStorage.removeItem('currentUser')
+          sessionStorage.removeItem('access_token')
+          setAuthState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+          })
+          return
+        }
+      } catch (error) {
+        console.log('❌ Error al verificar token, limpiando sesión...');
+        // Limpiar todos los tokens y datos de usuario
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('currentUser')
+        sessionStorage.removeItem('access_token')
+        setAuthState({
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+        })
+        return
+      }
+    }
+    
     setAuthState({
       user,
       isLoading: false,
@@ -62,7 +106,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ ...authState, login, logout }}>{children}</AuthContext.Provider>
+  const clearExpiredSession = () => {
+    console.log('🧹 Limpiando sesión expirada...');
+    // Limpiar todos los tokens y datos de usuario
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('currentUser')
+    sessionStorage.removeItem('access_token')
+    setAuthState({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+    })
+  }
+
+  return <AuthContext.Provider value={{ ...authState, login, logout, clearExpiredSession }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

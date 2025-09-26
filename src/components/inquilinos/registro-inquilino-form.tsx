@@ -57,11 +57,13 @@ const registroInquilinoSchema = z.object({
 
 type RegistroInquilinoData = z.infer<typeof registroInquilinoSchema>;
 
+
 interface RegistroInquilinoFormProps {
+  viviendaId: number;
   onSuccess?: () => void;
 }
 
-export function RegistroInquilinoForm({ onSuccess }: RegistroInquilinoFormProps) {
+export function RegistroInquilinoForm({ viviendaId, onSuccess }: RegistroInquilinoFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -149,7 +151,7 @@ export function RegistroInquilinoForm({ onSuccess }: RegistroInquilinoFormProps)
         genero: data.genero as 'M' | 'F',
         username,
         password,
-        vivienda_id: 15, // Esto debería obtenerse del contexto del propietario
+        vivienda_id: viviendaId,
         fecha_inicio: data.fecha_inicio,
         fecha_fin: data.fecha_fin || undefined,
         monto_alquiler: data.monto_alquiler,

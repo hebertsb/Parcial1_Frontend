@@ -36,9 +36,10 @@ export const authService = {
    */
   async login(credentials: LoginRequest): Promise<ApiResponse<{ access: string; refresh: string; user?: User }>> {
     console.log('🔐 AuthService: Enviando credenciales al backend:', credentials.email);
+    console.log('🚨 USANDO ENDPOINT CORRECTO: /authz/login/');
     
-    // USAR EL ENDPOINT QUE EXISTE SEGÚN DJANGO: /auth/login/
-    const response = await apiClient.post<{ access: string; refresh: string }>('/auth/login/', credentials);
+    // USAR EL ENDPOINT CORRECTO SEGÚN BACKEND: /authz/login/
+    const response = await apiClient.post<{ access: string; refresh: string; primary_role?: string; user?: any; roles?: any[] }>('/authz/login/', credentials);
     
     console.log('📡 AuthService: Respuesta del backend:', response);
     
@@ -53,79 +54,73 @@ export const authService = {
         localStorage.setItem('refresh_token', response.data.refresh);
       }
       
-      // Decodificar el JWT para obtener información del usuario
+      // NUEVO: Usar primary_role directamente del backend
+      let userRole = '';
+      let userName = 'Usuario';
+      let userEmail = credentials.email;
+      
+      if (response.data.primary_role) {
+        // El backend ya nos da el rol correcto en primary_role
+        userRole = response.data.primary_role.toLowerCase();
+        console.log('✅ AuthService: primary_role recibido del backend:', response.data.primary_role);
+        
+        // Mapear los roles del backend a los del frontend
+        switch(response.data.primary_role) {
+          case 'Administrador':
+            userRole = 'administrator';
+            break;
+          case 'Propietario':
+            userRole = 'propietario';
+            break;
+          case 'Inquilino':
+            userRole = 'inquilino';
+            break;
+          case 'Seguridad':
+            userRole = 'security';
+            break;
+          default:
+            userRole = 'propietario'; // fallback
+        }
+        
+        console.log('🔧 AuthService: Rol mapeado para frontend:', userRole);
+      }
+      
+      // Usar datos del usuario si están disponibles
+      if (response.data.user) {
+        if (response.data.user.email) {
+          userEmail = response.data.user.email;
+        }
+        if (response.data.user.persona && response.data.user.persona.nombre && response.data.user.persona.apellido) {
+          userName = `${response.data.user.persona.nombre} ${response.data.user.persona.apellido}`;
+        }
+        console.log('👤 AuthService: Datos del usuario del backend:', response.data.user);
+      }
+      
+      // Decodificar el JWT para obtener el ID
       const payload = JSON.parse(atob(response.data.access.split('.')[1]));
       console.log('🔍 AuthService: Payload JWT decodificado:', payload);
       
-      // MAPEO DIRECTO POR EMAIL (prioridad absoluta)
-      const email = payload.email || credentials.email;
-      let userRole = 'propietario'; // Por defecto propietario
-      let userName = 'Usuario';
-      
-      console.log('🔍 AuthService: Obteniendo rol del usuario desde el backend...');
-      
-      // SIEMPRE consultar el backend para obtener el rol real del usuario
-      try {
-        console.log('🔍 AuthService: Obteniendo información del usuario desde /api/personas/');
-        
-        // Hacer request directo con el token recién obtenido
-        const userInfoRequest = await fetch(`http://127.0.0.1:8000/api/personas/${payload.user_id}/`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${response.data.access}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (userInfoRequest.ok) {
-          const personaData = await userInfoRequest.json();
-          console.log('👤 AuthService: Datos de persona obtenidos:', personaData);
-          
-          // Usar el tipo_persona del backend (SIEMPRE)
-          if (personaData.tipo_persona) {
-            userRole = personaData.tipo_persona.toLowerCase();
-            console.log('✅ AuthService: Rol obtenido del backend:', userRole);
-          }
-          
-          // Usar el nombre real del backend
-          if (personaData.nombre_completo) {
-            userName = personaData.nombre_completo;
-          } else if (personaData.nombre && personaData.apellido) {
-            userName = `${personaData.nombre} ${personaData.apellido}`;
-          }
+      // Si no tenemos primary_role, usar fallback básico
+      if (!userRole) {
+        console.log('⚠️ AuthService: No se obtuvo primary_role del backend, usando fallback');
+        if (credentials.email.includes('admin')) {
+          userRole = 'administrator';
+        } else if (credentials.email.includes('security') || credentials.email.includes('seguridad')) {
+          userRole = 'security';
         } else {
-          console.warn('⚠️ AuthService: Error obteniendo info de persona:', userInfoRequest.status);
+          userRole = 'propietario'; // fallback por defecto
         }
-      } catch (userInfoError) {
-        console.warn('⚠️ AuthService: No se pudo obtener info de usuario desde /api/personas/', userInfoError);
+        console.log('🔄 AuthService: Rol fallback asignado:', userRole);
       }
       
+      // Crear el usuario frontend con los datos obtenidos
       let frontendUser: User;
       try {
-        // Si no se obtuvo el rol del backend, usar fallback mínimo
-        if (!userRole || userRole === 'propietario') {
-          console.log('⚠️ AuthService: No se obtuvo rol del backend, usando fallback');
-          // Fallback muy básico solo si no hay información del backend
-          if (email.includes('admin')) {
-            userRole = 'administrator';
-          } else if (email.includes('security') || email.includes('seguridad')) {
-            userRole = 'security';
-          } else {
-            // Por defecto usar propietario si no se puede determinar
-            userRole = 'propietario';
-          }
-          console.log('🔄 AuthService: Rol fallback asignado:', userRole);
-        }
-        
-        // Normalizar rol
-        userRole = userRole.toLowerCase();
-        if (userRole === 'admin') userRole = 'administrator';
-        if (userRole === 'owner') userRole = 'propietario';
-        if (userRole === 'tenant') userRole = 'inquilino';
+        console.log('✅ AuthService: Creando usuario con rol:', userRole);
         
         frontendUser = {
           id: payload.user_id?.toString() || payload.sub?.toString() || '1',
-          email: payload.email || credentials.email,
+          email: userEmail,
           name: userName,
           role: userRole as UserRole,
         };
@@ -134,10 +129,9 @@ export const authService = {
           localStorage.setItem('currentUser', JSON.stringify(frontendUser));
         }
         
-        console.log('👤 AuthService: Usuario frontal creado:', frontendUser);
-        console.log('🎯 AuthService: Email usado:', payload.email || credentials.email);
-        console.log('🎯 AuthService: Rol final asignado:', userRole);
-        console.log('🎯 AuthService: Tipo de rol:', typeof userRole);
+        console.log('👤 AuthService: Usuario creado:', frontendUser);
+        console.log('🎯 AuthService: Email:', userEmail);
+        console.log('🎯 AuthService: Rol:', userRole);
       } catch (error) {
         console.warn('⚠️ AuthService: Error decodificando JWT, usando datos por defecto:', error);
         

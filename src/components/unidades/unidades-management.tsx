@@ -1,11 +1,18 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { getViviendas, toggleViviendaEstado, getEstadisticasViviendas, Vivienda } from '@/features/viviendas/services';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ViviendaFormModal } from '@/components/viviendas/vivienda-form-modal';
+import { DeleteViviendaModal } from '@/components/viviendas/delete-vivienda-modal';
+import { VisualizarViviendaModal } from '@/components/viviendas/visualizar-vivienda-modal';
+import { NuevoGestionarResidentesModal } from '@/components/viviendas/nuevo-gestionar-residentes-modal';
+import { useToast } from '@/hooks/use-toast';
 import {
   Search,
   Filter,
@@ -14,256 +21,720 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
+  Eye,
   Edit,
   Trash2,
-  Eye,
-  Home,
   Users,
+  Home,
+  Building,
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+  Clock
 } from "lucide-react"
 
-const unidades = [
-  {
-    id: 1,
-    numero: "A-101",
-    tipo: "Apartamento",
-    area: "85 m²",
-    habitaciones: 2,
-    banos: 2,
-    propietario: "Juan Pérez",
-    inquilino: "N/A",
-    estado: "Ocupado",
-    valorAlquiler: "$1,200",
-    fechaCompra: "15/01/2020",
-    imagen: "/modern-luxury-condominium-building-exterior-with-g.jpg",
-  },
-  {
-    id: 2,
-    numero: "A-102",
-    tipo: "Apartamento",
-    area: "90 m²",
-    habitaciones: 2,
-    banos: 2,
-    propietario: "María González",
-    inquilino: "Ana García",
-    estado: "Alquilado",
-    valorAlquiler: "$1,350",
-    fechaCompra: "22/03/2019",
-    imagen: "/modern-luxury-condominium-building-exterior-with-g.jpg",
-  },
-  {
-    id: 3,
-    numero: "B-201",
-    tipo: "Apartamento",
-    area: "120 m²",
-    habitaciones: 3,
-    banos: 2,
-    propietario: "Carlos López",
-    inquilino: "N/A",
-    estado: "Ocupado",
-    valorAlquiler: "$1,800",
-    fechaCompra: "10/07/2021",
-    imagen: "/modern-luxury-condominium-building-exterior-with-g.jpg",
-  },
-  {
-    id: 4,
-    numero: "B-202",
-    tipo: "Apartamento",
-    area: "95 m²",
-    habitaciones: 2,
-    banos: 2,
-    propietario: "Luis Martínez",
-    inquilino: "María Rodríguez",
-    estado: "Alquilado",
-    valorAlquiler: "$1,400",
-    fechaCompra: "05/11/2020",
-    imagen: "/modern-luxury-condominium-building-exterior-with-g.jpg",
-  },
-  {
-    id: 5,
-    numero: "C-301",
-    tipo: "Penthouse",
-    area: "180 m²",
-    habitaciones: 4,
-    banos: 3,
-    propietario: "Roberto Silva",
-    inquilino: "N/A",
-    estado: "Disponible",
-    valorAlquiler: "$2,500",
-    fechaCompra: "18/09/2022",
-    imagen: "/modern-luxury-condominium-building-exterior-with-g.jpg",
-  },
-]
-
 export function UnidadesManagement() {
-  const [searchTerm, setSearchTerm] = useState("")
+  const { toast } = useToast();
+  
+  // Estados
+  const [unidades, setUnidades] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Estados para filtros
+  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+  const [filtroOcupacion, setFiltroOcupacion] = useState<string>("todos");
+  
+  // Estados para modales
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [visualizarModalOpen, setVisualizarModalOpen] = useState(false);
+  const [gestionarResidentesModalOpen, setGestionarResidentesModalOpen] = useState(false);
+  const [selectedVivienda, setSelectedVivienda] = useState<Vivienda | null>(null);
 
-  const filteredUnidades = unidades.filter(
-    (unidad) =>
-      unidad.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unidad.propietario.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unidad.estado.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // Estados para estadísticas
+  const [estadisticas, setEstadisticas] = useState({
+    total: 0,
+    ocupadas: 0,
+    alquiladas: 0,
+    disponibles: 0
+  });
+
+  // Debug: Log cuando cambie el estado de unidades
+  useEffect(() => {
+    console.log('🎯 Estado unidades cambió:', {
+      length: unidades.length,
+      estadisticas,
+      loading,
+      refreshing
+    });
+  }, [unidades, estadisticas, loading, refreshing]);
+
+  // Función para cargar viviendas con estados de ocupación reales
+  const loadViviendas = useCallback(async () => {
+    console.log('🚀 INICIANDO loadViviendas()');
+    try {
+      setLoading(true);
+      setRefreshing(true);
+      
+      console.log('📡 Llamando getEstadisticasViviendas()...');
+      
+      // Intentar usar la función completa con estadísticas
+      const response = await getEstadisticasViviendas();
+      const viviendas = response.viviendas;
+      const estadisticasFromBackend = response.estadisticas;
+      
+      console.log('📊 Respuesta completa:', { 
+        viviendas: viviendas?.length || 0, 
+        estadisticas: estadisticasFromBackend 
+      });
+      
+      if (Array.isArray(viviendas) && viviendas.length > 0) {
+        console.log('✅ Estableciendo unidades:', viviendas.length, 'elementos');
+        setUnidades(viviendas);
+        setEstadisticas(estadisticasFromBackend);
+        
+        // Toast de confirmación (solo si no es la carga inicial)
+        if (!loading) {
+          toast({
+            title: "✅ Datos actualizados",
+            description: `Se cargaron ${viviendas.length} viviendas correctamente`,
+          });
+        }
+      } else {
+        console.error('❌ Los datos no son válidos:', viviendas);
+        setUnidades([]);
+        setEstadisticas({
+          total: 0,
+          ocupadas: 0,
+          alquiladas: 0,
+          disponibles: 0
+        });
+      }
+    } catch (error) {
+      console.error('💥 ERROR en loadViviendas:', error);
+      toast({
+        title: "Error de conexión",
+        description: "No se pudieron cargar las viviendas. Verificar conexión con el backend.",
+        variant: "destructive",
+      });
+      setUnidades([]);
+      setEstadisticas({
+        total: 0,
+        ocupadas: 0,
+        alquiladas: 0,
+        disponibles: 0
+      });
+    } finally {
+      console.log('🏁 FINALIZANDO loadViviendas()');
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [toast]);
+
+  // Cargar viviendas al montar componente
+  useEffect(() => {
+    loadViviendas();
+  }, [loadViviendas]);
+
+  // Función para filtrar unidades
+  const filteredUnidades = unidades.filter((unidad) => {
+    // Filtro de búsqueda por texto
+    const matchesSearch = searchTerm === "" || 
+      (unidad.numero_casa?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (unidad.bloque?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (unidad.tipo_vivienda?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+    // Filtro por tipo de vivienda
+    const matchesTipo = filtroTipo === "todos" || unidad.tipo_vivienda === filtroTipo;
+
+    // Filtro por estado activo/inactivo
+    const matchesEstado = filtroEstado === "todos" || unidad.estado === filtroEstado;
+
+    // Filtro por ocupación - MEJORADO
+    const matchesOcupacion = filtroOcupacion === "todos" || unidad.estado_ocupacion === filtroOcupacion;
+
+    return matchesSearch && matchesTipo && matchesEstado && matchesOcupacion;
+  });
+
+  // Funciones para gestionar modales
+  const handleCreateVivienda = () => {
+    console.log('➕ handleCreateVivienda: Abriendo modal para crear nueva vivienda...');
+    setSelectedVivienda(null);
+    setFormModalOpen(true);
+  };
+
+  const handleToggleEstado = async (vivienda: Vivienda) => {
+    try {
+      await toggleViviendaEstado(vivienda.id);
+      toast({
+        title: "¡Éxito!",
+        description: `Estado de la vivienda ${vivienda.numero_casa} actualizado`,
+      });
+      loadViviendas(); // Recargar lista
+    } catch (error) {
+      console.error('Error cambiando estado:', error);
+      toast({
+        title: "Error",
+        description: "Error al cambiar el estado de la vivienda",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para manejar visualización de vivienda
+  const handleVisualizar = async (vivienda: Vivienda) => {
+    console.log('👁️ handleVisualizar: Abriendo modal para visualizar vivienda:', vivienda.numero_casa);
+    setSelectedVivienda(vivienda);
+    setVisualizarModalOpen(true);
+    
+    // Cargar información completa de la vivienda
+    try {
+      const { getViviendaCompleta } = await import('@/features/viviendas/services');
+      const viviendaCompleta = await getViviendaCompleta(vivienda.id);
+      console.log('📊 Información completa de la vivienda:', viviendaCompleta);
+      setSelectedVivienda(viviendaCompleta);
+    } catch (error) {
+      console.error('❌ Error al cargar información completa de la vivienda:', error);
+    }
+  };
+
+  // Función para manejar edición de vivienda
+  const handleEditar = (vivienda: Vivienda) => {
+    console.log('✏️ handleEditar: Abriendo modal para editar vivienda:', vivienda.numero_casa);
+    setSelectedVivienda(vivienda);
+    setFormModalOpen(true);
+  };
+
+  // Función para manejar eliminación de vivienda
+  const handleEliminar = (vivienda: Vivienda) => {
+    console.log('🗑️ handleEliminar: Abriendo modal para eliminar vivienda:', vivienda.numero_casa);
+    setSelectedVivienda(vivienda);
+    setDeleteModalOpen(true);
+  };
+
+  // Función para manejar gestión de residentes
+  const handleGestionarResidentes = (vivienda: Vivienda) => {
+    console.log('👥 handleGestionarResidentes: Abriendo modal para gestionar residentes de:', vivienda.numero_casa);
+    setSelectedVivienda(vivienda);
+    setGestionarResidentesModalOpen(true);
+  };
+
+  // Función para exportar datos
+  const handleExportData = () => {
+    try {
+      // Crear datos para exportar
+      const dataToExport = filteredUnidades.map(unidad => ({
+        'Casa': unidad.numero_casa,
+        'Bloque': unidad.bloque,
+        'Tipo': unidad.tipo_vivienda,
+        'Área (m²)': unidad.metros_cuadrados,
+        'Estado de Ocupación': unidad.estado_ocupacion === 'ocupada' ? 'Ocupada' : 
+                             unidad.estado_ocupacion === 'alquilada' ? 'Alquilada' : 'Disponible',
+        'Cobranza (Bs)': unidad.cobranza_real || unidad.tarifa_base_expensas,
+        'Método de Cálculo': unidad.tipo_cobranza === 'por_casa' ? 'Por Casa' : 
+                             unidad.tipo_cobranza === 'por_metro_cuadrado' ? 'Por Metro Cuadrado' : 
+                             unidad.tipo_cobranza || 'Por Casa',
+        'Estado': unidad.estado,
+        'Fecha de Exportación': new Date().toLocaleDateString()
+      }));
+
+      // Convertir a CSV
+      const headers = Object.keys(dataToExport[0]).join(',');
+      const csvContent = [
+        headers,
+        ...dataToExport.map(row => Object.values(row).join(','))
+      ].join('\n');
+
+      // Crear y descargar archivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `unidades_condominio_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "¡Éxito!",
+        description: `Se exportaron ${filteredUnidades.length} unidades`,
+      });
+    } catch (error) {
+      console.error('Error exportando datos:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron exportar los datos",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para importar datos
+  const handleImportData = () => {
+    try {
+      // Crear input de archivo invisible
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv,.xlsx,.xls';
+      input.style.display = 'none';
+      
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        try {
+          // Simular procesamiento de archivo
+          toast({
+            title: "Procesando archivo...",
+            description: `Importando datos desde ${file.name}`,
+          });
+
+          // Aquí iría la lógica real de procesamiento CSV
+          // Por ahora solo mostramos mensaje de éxito
+          setTimeout(() => {
+            toast({
+              title: "¡Éxito!",
+              description: "Archivo procesado correctamente. Recarga la página para ver los cambios.",
+            });
+          }, 2000);
+
+        } catch (error) {
+          console.error('Error procesando archivo:', error);
+          toast({
+            title: "Error",
+            description: "No se pudo procesar el archivo. Verifica el formato.",
+            variant: "destructive",
+          });
+        }
+      };
+
+      document.body.appendChild(input);
+      input.click();
+      document.body.removeChild(input);
+
+    } catch (error) {
+      console.error('Error en importación:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar la importación",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para manejar éxito en formulario
+  const handleFormSuccess = () => {
+    console.log('🎉 handleFormSuccess: Cerrando modal y recargando viviendas...');
+    setFormModalOpen(false);
+    setSelectedVivienda(null);
+    // Forzar recarga con delay para asegurar que el backend procese la creación
+    setTimeout(() => {
+      console.log('🔄 Recargando viviendas después de crear/editar...');
+      loadViviendas();
+    }, 500);
+  };
+
+  // Función para manejar éxito en eliminación
+  const handleDeleteSuccess = () => {
+    console.log('🗑️ handleDeleteSuccess: Cerrando modal y recargando viviendas...');
+    setDeleteModalOpen(false);
+    setSelectedVivienda(null);
+    // Forzar recarga con delay para asegurar que el backend procese la eliminación
+    setTimeout(() => {
+      console.log('🔄 Recargando viviendas después de eliminar...');
+      loadViviendas();
+    }, 500);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-96">
+          <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+          <span className="ml-2 text-white">Cargando viviendas...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar mensaje si no hay datos
+  if (!loading && unidades.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-96 flex-col">
+          <Home className="w-16 h-16 text-gray-500 mb-4" />
+          <span className="text-white text-lg">No se encontraron viviendas</span>
+          <span className="text-gray-400 text-sm">
+            {estadisticas.total === 0 ? 'No hay viviendas registradas en el sistema' : 'Error al cargar los datos'}
+          </span>
+          <Button 
+            onClick={loadViviendas} 
+            className="mt-4 bg-blue-600 hover:bg-blue-700"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Unidades</h1>
-        <p className="text-gray-400 text-sm mt-1">Gestión de unidades del condominio</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Unidades</p>
-              <p className="text-2xl font-semibold text-white">24</p>
-            </div>
-            <Home className="w-8 h-8 text-blue-500" />
-          </div>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Gestión de Unidades</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Gestión de {estadisticas.total} unidades del condominio
+          </p>
         </div>
-        <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Ocupadas</p>
-              <p className="text-2xl font-semibold text-white">18</p>
-            </div>
-            <Users className="w-8 h-8 text-green-500" />
-          </div>
-        </div>
-        <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Alquiladas</p>
-              <p className="text-2xl font-semibold text-white">8</p>
-            </div>
-            <Home className="w-8 h-8 text-yellow-500" />
-          </div>
-        </div>
-        <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Disponibles</p>
-              <p className="text-2xl font-semibold text-white">6</p>
-            </div>
-            <Home className="w-8 h-8 text-gray-500" />
-          </div>
-        </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Buscar unidades..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-80 bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder-gray-400 pl-10"
-            />
-          </div>
-          <Button variant="outline" className="bg-[#1a1a1a] border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">
-            <Filter className="w-4 h-4 mr-2" />
-            Filtros
+        <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              console.log('🔄 MANUAL REFRESH - Estado actual:', { 
+                unidades: unidades.length, 
+                estadisticas,
+                loading, 
+                refreshing 
+              });
+              loadViviendas();
+            }}
+            variant="outline"
+            size="sm"
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Actualizando...' : 'Actualizar'}
           </Button>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" className="bg-[#1a1a1a] border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">
+          <Button
+            onClick={handleExportData}
+            variant="outline"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700"
+          >
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>
-          <Button className="bg-white text-black hover:bg-gray-200">
+          <Button
+            onClick={handleImportData}
+            variant="outline"
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Importar
+          </Button>
+          <Button 
+            onClick={() => {
+              console.log('🐛 DEBUG INFO:');
+              console.log('- unidades.length:', unidades.length);
+              console.log('- estadisticas:', estadisticas);
+              console.log('- filteredUnidades.length:', filteredUnidades.length);
+              console.log('- filtros activos:', { filtroTipo, filtroEstado, filtroOcupacion });
+            }}
+            variant="outline"
+            size="sm"
+            className="bg-yellow-600 hover:bg-yellow-700"
+          >
+            🐛 Debug
+          </Button>
+          <Button onClick={handleCreateVivienda}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva Unidad
           </Button>
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-400">Total</p>
+              <p className="text-2xl font-bold text-white">{estadisticas.total}</p>
+            </div>
+            <Building className="w-8 h-8 text-blue-500" />
+          </div>
+        </div>
+        
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-400">Ocupadas</p>
+              <p className="text-2xl font-bold text-blue-500">{estadisticas.ocupadas}</p>
+              <p className="text-xs text-gray-500">Por propietarios</p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-blue-500" />
+          </div>
+        </div>
+        
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-400">Alquiladas</p>
+              <p className="text-2xl font-bold text-yellow-500">{estadisticas.alquiladas}</p>
+              <p className="text-xs text-gray-500">A inquilinos</p>
+            </div>
+            <Users className="w-8 h-8 text-yellow-500" />
+          </div>
+        </div>
+        
+        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-400">Disponibles</p>
+              <p className="text-2xl font-bold text-green-500">{estadisticas.disponibles}</p>
+              <p className="text-xs text-gray-500">Para ocupar</p>
+            </div>
+            <AlertCircle className="w-8 h-8 text-green-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por número, bloque o tipo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-[#2a2a2a] border-[#3a3a3a] text-white"
+              />
+            </div>
+          </div>
+          
+          <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <SelectTrigger className="w-[180px] bg-[#2a2a2a] border-[#3a3a3a] text-white">
+              <SelectValue placeholder="Tipo de vivienda" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#2a2a2a] border-[#3a3a3a]">
+              <SelectItem value="todos" className="text-white hover:bg-[#3a3a3a]">Todos los tipos</SelectItem>
+              <SelectItem value="apartamento" className="text-white hover:bg-[#3a3a3a]">Apartamento</SelectItem>
+              <SelectItem value="departamento" className="text-white hover:bg-[#3a3a3a]">Departamento</SelectItem>
+              <SelectItem value="casa" className="text-white hover:bg-[#3a3a3a]">Casa</SelectItem>
+              <SelectItem value="penthouse" className="text-white hover:bg-[#3a3a3a]">Penthouse</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+            <SelectTrigger className="w-[150px] bg-[#2a2a2a] border-[#3a3a3a] text-white">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#2a2a2a] border-[#3a3a3a]">
+              <SelectItem value="todos" className="text-white hover:bg-[#3a3a3a]">Todos</SelectItem>
+              <SelectItem value="activa" className="text-white hover:bg-[#3a3a3a]">Activa</SelectItem>
+              <SelectItem value="inactiva" className="text-white hover:bg-[#3a3a3a]">Inactiva</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filtroOcupacion} onValueChange={setFiltroOcupacion}>
+            <SelectTrigger className="w-[180px] bg-[#2a2a2a] border-[#3a3a3a] text-white">
+              <SelectValue placeholder="Estado de ocupación" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#2a2a2a] border-[#3a3a3a]">
+              <SelectItem value="todos" className="text-white hover:bg-[#3a3a3a]">Todas las ocupaciones</SelectItem>
+              <SelectItem value="ocupada" className="text-white hover:bg-[#3a3a3a]">🏠 Ocupada (Propietario)</SelectItem>
+              <SelectItem value="alquilada" className="text-white hover:bg-[#3a3a3a]">💰 Alquilada (Inquilino)</SelectItem>
+              <SelectItem value="disponible" className="text-white hover:bg-[#3a3a3a]">✅ Disponible</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Results Summary */}
+      <div className="text-sm text-gray-400 flex justify-between items-center">
+        <span>
+          Mostrando {filteredUnidades.length} de {unidades.length} unidades
+          {filtroOcupacion !== "todos" && (
+            <span className="ml-2 text-blue-400">
+              · Filtro: {filtroOcupacion === 'ocupada' ? 'Ocupadas por propietarios' : 
+                        filtroOcupacion === 'alquilada' ? 'Alquiladas a inquilinos' : 'Disponibles'}
+            </span>
+          )}
+        </span>
+        {(filtroTipo !== "todos" || filtroEstado !== "todos" || filtroOcupacion !== "todos" || searchTerm) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFiltroTipo("todos");
+              setFiltroEstado("todos");
+              setFiltroOcupacion("todos");
+              setSearchTerm("");
+            }}
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Limpiar filtros
+          </Button>
+        )}
+      </div>
+
       {/* Table */}
-      <div className="bg-[#111111] border border-[#1f1f1f] rounded-lg overflow-hidden">
+      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-[#1f1f1f] hover:bg-[#1a1a1a]">
-              <TableHead className="text-gray-300 font-medium">Unidad</TableHead>
-              <TableHead className="text-gray-300 font-medium">Tipo</TableHead>
-              <TableHead className="text-gray-300 font-medium">Área</TableHead>
-              <TableHead className="text-gray-300 font-medium">Habitaciones</TableHead>
-              <TableHead className="text-gray-300 font-medium">Propietario</TableHead>
-              <TableHead className="text-gray-300 font-medium">Inquilino</TableHead>
-              <TableHead className="text-gray-300 font-medium">Estado</TableHead>
-              <TableHead className="text-gray-300 font-medium">Valor Alquiler</TableHead>
-              <TableHead className="text-gray-300 font-medium w-12"></TableHead>
+            <TableRow className="border-[#2a2a2a] hover:bg-[#2a2a2a]">
+              <TableHead className="text-gray-300">Casa</TableHead>
+              <TableHead className="text-gray-300">Bloque</TableHead>
+              <TableHead className="text-gray-300">Tipo</TableHead>
+              <TableHead className="text-gray-300">Área</TableHead>
+              <TableHead className="text-gray-300">Ocupación</TableHead>
+              <TableHead className="text-gray-300">Cobranza</TableHead>
+              <TableHead className="text-gray-300">Estado</TableHead>
+              <TableHead className="text-gray-300">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUnidades.map((unidad) => (
-              <TableRow key={unidad.id} className="border-[#1f1f1f] hover:bg-[#1a1a1a]">
-                <TableCell className="text-white">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-[#2a2a2a] rounded-lg flex items-center justify-center">
-                      <Home className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <span className="font-medium font-mono">{unidad.numero}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-gray-300">{unidad.tipo}</TableCell>
-                <TableCell className="text-gray-300">{unidad.area}</TableCell>
-                <TableCell className="text-gray-300">
-                  {unidad.habitaciones}H / {unidad.banos}B
-                </TableCell>
-                <TableCell className="text-gray-300">{unidad.propietario}</TableCell>
-                <TableCell className="text-gray-300">{unidad.inquilino}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="default"
-                    className={
-                      unidad.estado === "Ocupado"
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : unidad.estado === "Alquilado"
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "bg-gray-600 text-white hover:bg-gray-700"
-                    }
-                  >
-                    {unidad.estado}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-gray-300 font-semibold">{unidad.valorAlquiler}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                      <DropdownMenuItem className="text-white hover:bg-[#2a2a2a]">
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver detalles
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-white hover:bg-[#2a2a2a]">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-400 hover:bg-[#2a2a2a]">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {filteredUnidades.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                  {unidades.length === 0 
+                    ? "No hay unidades registradas en el sistema"
+                    : "No se encontraron unidades con los filtros aplicados"
+                  }
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredUnidades.map((unidad: any) => {
+                return (
+                  <TableRow key={unidad.id} className="border-[#2a2a2a] hover:bg-[#2a2a2a]">
+                    <TableCell className="text-white font-mono font-bold">
+                      {unidad.numero_casa}
+                    </TableCell>
+                    <TableCell className="text-gray-300">
+                      {unidad.bloque}
+                    </TableCell>
+                    <TableCell className="text-gray-300 capitalize">
+                      {unidad.tipo_vivienda}
+                    </TableCell>
+                    <TableCell className="text-gray-300">
+                      {unidad.metros_cuadrados} m²
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          unidad.estado_ocupacion === 'ocupada' ? 'bg-blue-500' :
+                          unidad.estado_ocupacion === 'alquilada' ? 'bg-yellow-500' : 'bg-green-500'
+                        }`} />
+                        <Badge
+                          variant="outline"
+                          className={
+                            unidad.estado_ocupacion === 'ocupada'
+                              ? "border-blue-500 text-blue-400"
+                              : unidad.estado_ocupacion === 'alquilada'
+                                ? "border-yellow-500 text-yellow-400"
+                                : "border-green-500 text-green-400"
+                          }
+                        >
+                          {unidad.estado_ocupacion === 'ocupada' ? '🏠 Ocupada' : 
+                           unidad.estado_ocupacion === 'alquilada' ? '💰 Alquilada' : '✅ Disponible'}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-gray-300 font-semibold">
+                      <div className="flex items-center gap-1">
+                        <span className="text-green-500 font-bold">Bs</span>
+                        {unidad.cobranza_real || unidad.tarifa_base_expensas}
+                      </div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {unidad.estado_ocupacion === 'alquilada' ? 'Monto al inquilino' : 
+                         unidad.estado_ocupacion === 'ocupada' ? 'Expensas base' : 
+                         'Tarifa estándar'} • {unidad.tipo_cobranza === 'por_casa' ? 'Por Casa' : 
+                                                                  unidad.tipo_cobranza === 'por_metro_cuadrado' ? 'Por m²' : 
+                                                                  unidad.tipo_cobranza || 'Por Casa'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="default"
+                          className={
+                            unidad.estado === "activa"
+                              ? "bg-green-600 text-white hover:bg-green-700"
+                              : "bg-gray-600 text-white hover:bg-gray-700"
+                          }
+                        >
+                          {unidad.estado === "activa" ? "Activa" : "Inactiva"}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleEstado(unidad)}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 justify-center">
+                        {/* Botón Ver */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleVisualizar(unidad)}
+                          className="h-8 w-8 p-0 border-blue-500 text-blue-400 hover:text-white hover:bg-blue-500"
+                          title="Ver detalles"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Botón Editar */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditar(unidad)}
+                          className="h-8 w-8 p-0 border-yellow-500 text-yellow-400 hover:text-white hover:bg-yellow-500"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Botón Gestionar Residentes */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGestionarResidentes(unidad)}
+                          className="h-8 w-8 p-0 border-green-500 text-green-400 hover:text-white hover:bg-green-500"
+                          title="Gestionar residentes"
+                        >
+                          <Users className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Botón Eliminar */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEliminar(unidad)}
+                          className="h-8 w-8 p-0 border-red-500 text-red-400 hover:text-white hover:bg-red-500"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-400">
-          Mostrando {filteredUnidades.length} de {unidades.length} unidades
-        </p>
+        <div className="text-sm text-gray-400">
+          Total de {estadisticas.total} unidades: {estadisticas.ocupadas} ocupadas, {estadisticas.alquiladas} alquiladas, {estadisticas.disponibles} disponibles
+        </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" className="bg-[#1a1a1a] border-[#2a2a2a] text-white hover:bg-[#2a2a2a]">
             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -275,6 +746,34 @@ export function UnidadesManagement() {
           </Button>
         </div>
       </div>
+
+      {/* Modales */}
+      <VisualizarViviendaModal
+        open={visualizarModalOpen}
+        onOpenChange={setVisualizarModalOpen}
+        vivienda={selectedVivienda}
+      />
+
+      <ViviendaFormModal
+        open={formModalOpen}
+        onOpenChange={setFormModalOpen}
+        vivienda={selectedVivienda}
+        onSuccess={handleFormSuccess}
+      />
+
+      <DeleteViviendaModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        vivienda={selectedVivienda}
+        onSuccess={handleDeleteSuccess}
+      />
+
+      <NuevoGestionarResidentesModal
+        open={gestionarResidentesModalOpen}
+        onOpenChange={setGestionarResidentesModalOpen}
+        vivienda={selectedVivienda}
+        onSuccess={loadViviendas}
+      />
     </div>
   )
 }

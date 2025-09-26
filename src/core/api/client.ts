@@ -118,7 +118,9 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<RequestInit> {
-    const token = this.getAuthToken();
+    // No enviar token en peticiones de autenticación
+    const isAuthEndpoint = endpoint.includes('/login') || endpoint.includes('/register') || endpoint.includes('/refresh');
+    const token = !isAuthEndpoint ? this.getAuthToken() : null;
     
     let config: RequestInit = {
       headers: {

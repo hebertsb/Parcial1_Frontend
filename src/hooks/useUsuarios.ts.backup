@@ -1,0 +1,749 @@
+/**
+ * Hook useUsuarios - VERSIÓN CORREGIDA SEGÚN PAYLOAD REAL
+ * Conecta con http://127.0.0.1:8000/api/personas/
+ * 
+ * CAMPOS DISPONIBLES EN BACKEND (confirmados):
+ * - id, nombre, apellido, nombre_completo
+ * - documento_identidad, telefono, email
+ * - tipo_persona, activo
+ * 
+ * CAMPOS QUE NO EXISTEN:
+ * - profesion ❌ (eliminar)
+ * - unidad ❌ (está en /api/viviendas/ o /api/propiedades/)
+ * - rol ❌ (usar tipo_persona)
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import type { UserRole } from '@/core/types';
+
+// Mapeo de tipo_persona a rol descriptivo
+const mapearTipoPersonaARol = (tipo: string) => {
+  const mapeo = {
+    'administrador': {
+      id: 1,
+      nombre: 'Administrador',
+      descripcion: 'Acceso completo al sistema',
+      activo: true
+    },
+    'propietario': {
+      id: 2, 
+      nombre: 'Propietario',
+      descripcion: 'Propietario de unidad',
+      activo: true
+    },
+    'inquilino': {
+      id: 3,
+      nombre: 'Inquilino', 
+      descripcion: 'Inquilino de unidad',
+      activo: true
+    },
+    'seguridad': {
+      id: 4,
+      nombre: 'Seguridad',
+      descripcion: 'Personal de seguridad',
+      activo: true
+    },
+    'cliente': {
+      id: 5,
+      nombre: 'Cliente',
+      descripcion: 'Cliente general',
+      activo: true
+    }
+  };
+  
+  return mapeo[tipo] || {
+    id: 0,
+    nombre: tipo,
+    descripcion: `Tipo: ${tipo}`,
+    activo: true
+  };
+};
+
+export function useUsuarios() {
+  const { user, login } = useAuth();
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const cargarUsuarios = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 useUsuarios: Llamando a endpoint de authz para gestión de usuarios');
+      
+      const response = await fetch('http://127.0.0.1:8000/api/authz/usuarios/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Token expirado. Inicia sesión nuevamente.');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Respuesta del backend:', data);
+      
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('🔍 Campos disponibles en primera persona:', Object.keys(data[0]));
+        console.log('🔍 Ejemplo persona completa:', data[0]);
+      }
+
+      // Transformar datos del endpoint /api/authz/usuarios/ al formato del frontend
+      const usuariosTransformados = data.map(usuario => {
+        // El endpoint authz devuelve usuarios con persona anidada y roles
+        const persona = usuario.persona || {};
+        const roles = usuario.roles || [];
+        const rolPrincipal = roles[0] || { id: 0, nombre: 'Sin rol' };
+        
+        return {
+          // IDs
+          id: usuario.id,
+          
+          // Información personal desde persona anidada
+          email: usuario.email,
+          nombres: persona.nombre || 'N/A',
+          apellidos: persona.apellido || 'N/A',
+          telefono: persona.telefono || 'N/A',
+          documento_identidad: persona.documento_identidad || 'N/A',
+          
+          // Estado del usuario
+          estado: usuario.estado || 'ACTIVO',
+          activo: usuario.estado === 'ACTIVO',
+          
+          // Rol desde el array de roles del usuario
+          rol: {
+            id: rolPrincipal.id,
+            nombre: rolPrincipal.nombre,
+            descripcion: `Rol de ${rolPrincipal.nombre}`,
+            activo: true
+          },
+          
+          // Fechas (usar valores por defecto si no están disponibles)
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          fecha_registro: new Date().toISOString(),
+
+          // Datos de la persona (preservar estructura)
+          persona: {
+            id: persona.id,
+            nombre: persona.nombre,
+            apellido: persona.apellido,
+            nombre_completo: persona.nombre_completo,
+            documento_identidad: persona.documento_identidad,
+            telefono: persona.telefono,
+            email: persona.email,
+            tipo_persona: persona.tipo_persona,
+            activo: persona.activo
+          },
+          
+          // Array completo de roles del usuario
+          roles: roles
+        };
+      });
+
+      setUsuarios(usuariosTransformados);
+      console.log(`✅ useUsuarios: ${usuariosTransformados.length} usuarios cargados desde backend REAL`);
+      
+    } catch (err) {
+      console.error('❌ Error cargando usuarios:', err);
+      setError(err.message || 'Error desconocido');
+      setUsuarios([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarUsuarios();
+  }, [cargarUsuarios]);
+
+  // Funciones adicionales para compatibilidad
+  const refetch = cargarUsuarios;
+  const recargar = cargarUsuarios;
+
+  const crearUsuario = async (userData) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Creando usuario completo:', userData);
+
+      // Verificar si es un usuario completo (con credenciales) o solo persona
+      if (userData.usuario && userData.persona) {
+        // OPCIÓN 1: Usuario completo con credenciales
+        console.log('👤 Creando usuario del sistema con credenciales...');
+        
+        // Paso 1: Crear la persona primero
+        const datosPersona = {
+          nombre: userData.persona.nombre,
+          apellido: userData.persona.apellido,
+          documento_identidad: userData.persona.documento_identidad,
+          telefono: userData.persona.telefono,
+          email: userData.persona.email,
+          tipo_persona: userData.persona.tipo_persona,
+          activo: userData.persona.activo !== false
+        };
+
+        const responsePersona = await fetch('http://127.0.0.1:8000/api/personas/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(datosPersona)
+        });
+
+        if (!responsePersona.ok) {
+          const errorData = await responsePersona.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error creando persona: HTTP ${responsePersona.status}`);
+        }
+
+        const nuevaPersona = await responsePersona.json();
+        console.log('✅ Persona creada:', nuevaPersona);
+
+        // Paso 2: Crear usuario del sistema con credenciales
+        const datosUsuario = {
+          username: userData.usuario.username,
+          password: userData.usuario.password,
+          email: userData.usuario.email,
+          is_active: userData.usuario.is_active,
+          is_staff: userData.usuario.is_staff,
+          persona_id: nuevaPersona.id // Vincular con la persona creada
+        };
+
+        console.log('🔐 Creando credenciales de acceso...');
+        const responseUsuario = await fetch('http://127.0.0.1:8000/api/usuarios/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(datosUsuario)
+        });
+
+        if (!responseUsuario.ok) {
+          // Si falla la creación del usuario, intentar eliminar la persona creada
+          console.warn('⚠️ Error creando usuario, intentando limpiar persona creada...');
+          try {
+            await fetch(`http://127.0.0.1:8000/api/personas/${nuevaPersona.id}/`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+          } catch (cleanupErr) {
+            console.error('Error en cleanup:', cleanupErr);
+          }
+          
+          const errorData = await responseUsuario.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error creando usuario: HTTP ${responseUsuario.status}`);
+        }
+
+        const nuevoUsuario = await responseUsuario.json();
+        console.log('✅ Usuario del sistema creado:', nuevoUsuario);
+
+      } else {
+        // OPCIÓN 2: Solo crear persona (compatibilidad con versión anterior)
+        console.log('📄 Creando solo persona (sin credenciales)...');
+        
+        const datosPersona = {
+          nombre: userData.nombre || userData.persona?.nombre,
+          apellido: userData.apellido || userData.persona?.apellido,
+          documento_identidad: userData.documento_identidad || userData.persona?.documento_identidad,
+          telefono: userData.telefono || userData.persona?.telefono,
+          email: userData.email || userData.persona?.email,
+          tipo_persona: userData.tipo_persona || userData.persona?.tipo_persona,
+          activo: (userData.activo !== false) && (userData.persona?.activo !== false)
+        };
+
+        const response = await fetch('http://127.0.0.1:8000/api/personas/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(datosPersona)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const nuevaPersona = await response.json();
+        console.log('✅ Persona creada (sin credenciales):', nuevaPersona);
+      }
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error creando usuario:', err);
+      setError(err.message || 'Error creando usuario');
+      return false;
+    }
+  };
+
+  const actualizarUsuario = async (id, userData) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 useUsuarios: Actualizando usuario con authz endpoint:', id, userData);
+
+      // Preparar datos para el endpoint de authz (cambio de roles)
+      const datosUsuario = {
+        email: userData.email,
+        estado: userData.estado || 'ACTIVO',
+        // Convertir rol a array de IDs de roles
+        roles: userData.roles ? userData.roles.map(rol => rol.id) : []
+      };
+
+      console.log('📝 Datos a enviar al endpoint authz:', datosUsuario);
+
+      // Usar endpoint de authz para cambiar roles del usuario
+      const response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(datosUsuario)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const usuarioActualizado = await response.json();
+      console.log('✅ useUsuarios: Usuario actualizado con sincronización automática:', usuarioActualizado);
+      console.log('🔄 useUsuarios: El backend sincronizó automáticamente tipo_persona con el nuevo rol');
+      
+      // Recargar la lista para ver los cambios
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ useUsuarios: Error actualizando usuario:', err);
+      setError(err.message || 'Error actualizando usuario');
+      return false;
+    }
+  };
+
+  const eliminarUsuario = async (id) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Eliminando usuario (lógico) desde authz:', id);
+
+      // Eliminación lógica: cambiar estado a INACTIVO
+      const response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ estado: 'INACTIVO' })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Usuario eliminado (lógicamente)');
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error eliminando usuario:', err);
+      setError(err.message || 'Error eliminando usuario');
+      return false;
+    }
+  };
+
+  const cambiarEstadoUsuario = async (id, activo) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Cambiando estado usuario:', id, activo);
+
+      const response = await fetch(`http://127.0.0.1:8000/api/personas/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ activo })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Estado cambiado');
+      
+      // Recargar la lista
+      await cargarUsuarios();
+      return true;
+
+    } catch (err) {
+      console.error('❌ Error cambiando estado:', err);
+      setError(err.message || 'Error cambiando estado');
+      return false;
+    }
+  };
+
+  const verUsuario = async (id) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🚀 Obteniendo usuario desde authz:', id);
+
+      const response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${id}/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const usuario = await response.json();
+      console.log('✅ Usuario obtenido desde authz:', usuario);
+      
+      // Mapear estructura de authz/usuarios/ al formato esperado por el frontend
+      const persona = usuario.persona || {};
+      const roles = usuario.roles || [];
+      const rolPrincipal = roles[0] || { id: 0, nombre: 'Sin rol' };
+      
+      return {
+        id: usuario.id,
+        email: usuario.email,
+        nombres: persona.nombre || 'N/A',
+        apellidos: persona.apellido || 'N/A',
+        telefono: persona.telefono || 'N/A',
+        documento_identidad: persona.documento_identidad || 'N/A',
+        estado: usuario.estado || 'ACTIVO',
+        activo: usuario.estado === 'ACTIVO',
+        rol: {
+          id: rolPrincipal.id,
+          nombre: rolPrincipal.nombre,
+          descripcion: `Rol de ${rolPrincipal.nombre}`,
+          tipo: rolPrincipal.nombre.toLowerCase(),
+          color: rolPrincipal.nombre === 'Administrador' ? 'red' : 
+                 rolPrincipal.nombre === 'Propietario' ? 'green' :
+                 rolPrincipal.nombre === 'Inquilino' ? 'blue' : 'purple',
+          label: rolPrincipal.nombre
+        },
+        persona: persona,
+        roles: roles
+      };
+
+    } catch (err) {
+      console.error('❌ Error obteniendo usuario:', err);
+      setError(err.message || 'Error obteniendo usuario');
+      return null;
+    }
+  };
+
+  const editarUsuario = async (id, userData) => {
+    // Alias para actualizarUsuario
+    return await actualizarUsuario(id, userData);
+  };
+
+  const transferirPropiedad = async (inquilinoId, accionPropietarioAnterior = 'desactivar') => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🏠 Cambiando rol de usuario desde authz:', inquilinoId, 'a propietario');
+      
+      // Cambiar rol usando endpoint authz (backend ya corregido)
+      const requestBody = { roles: [3] }; // ID 3 = Propietario
+      console.log('📤 Request body:', JSON.stringify(requestBody));
+      
+      const response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${inquilinoId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('📥 Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+      console.log('✅ Rol cambiado a propietario:', resultado);
+      
+      // Verificar que el cambio se aplicó correctamente
+      const rolesIds = resultado.roles?.map(r => r.id) || [];
+      const tieneRolPropietario = rolesIds.includes(3);
+      console.log('🎯 Roles actuales:', rolesIds);
+      console.log('🏠 ¿Es propietario?', tieneRolPropietario);
+      
+
+        
+        try {
+          response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${inquilinoId}/transferir_propiedad/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              accion: 'convertir_a_propietario'
+            })
+          });
+          
+          console.log('📥 Response status (transferencia):', response.status, response.statusText);
+        } catch (error) {
+          console.error('❌ Error en transferencia:', error);
+          response = { ok: false } as Response; // Forzar que continúe
+        }
+      }
+      
+      console.log('🔍 Estado después de transferencia - response.ok:', response.ok);
+      
+      // Si ambos fallan, intentar con endpoint de personas
+      if (!response.ok) {
+        console.log('🔄 Transferencia falló, intentando con endpoint de personas...');
+        console.log('🔍 Iniciando Método 3: PATCH a /api/personas/');
+        
+        // Primero obtener el ID de la persona asociada
+        const usuarioCompleto = await verUsuario(inquilinoId);
+        const personaId = usuarioCompleto?.persona?.id;
+        
+        if (personaId) {
+          console.log('📝 Intentando cambiar tipo_persona directamente:', personaId);
+          response = await fetch(`http://127.0.0.1:8000/api/personas/${personaId}/`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              tipo_persona: 'propietario'
+            })
+          });
+          
+          console.log('� Response status (personas PATCH):', response.status, response.statusText);
+        }
+      }
+      
+      // Método 4: Intentar endpoint específico de asignación de roles
+      if (!response.ok) {
+        console.log('🔄 Intentando endpoint específico asignar_roles...');
+        console.log('🔍 Iniciando Método 4A: POST a /api/authz/usuarios/.../asignar_roles/');
+        
+        try {
+          response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${inquilinoId}/asignar_roles/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              roles: [3],  // ID 3 = Propietario
+              accion: 'asignar'
+            })
+          });
+          
+          console.log('📥 Response status (asignar_roles):', response.status, response.statusText);
+        } catch (error) {
+          console.error('❌ Error en asignar_roles:', error);
+          response = { ok: false } as Response;
+        }
+      }
+      
+      // Como última opción, usar PATCH genérico (sabemos que no funciona, pero por completitud)
+      if (!response.ok) {
+        console.log('🔄 Usando PATCH genérico como última opción (sabemos que falla)...');
+        console.log('🔍 Iniciando Método 4B: PATCH a /api/authz/usuarios/ con roles');
+        
+        response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${inquilinoId}/`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        console.log('📥 Response status (PATCH genérico):', response.status, response.statusText);
+      }
+      
+      console.log('🏁 Proceso de cambio de rol completado. Estado final response.ok:', response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+      console.log('✅ Rol cambiado a propietario:', resultado);
+      console.log('🔍 Roles en respuesta:', resultado.roles);
+      console.log('🔍 Tipo persona en respuesta:', resultado.persona?.tipo_persona);
+      
+      // Expandir detalles de los roles para debug
+      if (resultado.roles && resultado.roles.length > 0) {
+        resultado.roles.forEach((rol, index) => {
+          console.log(`🔍 Rol ${index}:`, {
+            id: rol.id,
+            nombre: rol.nombre,
+            descripcion: rol.descripcion
+          });
+        });
+      }
+      
+      // Verificar si el cambio se aplicó realmente
+      const rolesIds = resultado.roles?.map(r => r.id) || [];
+      const tieneRolPropietario = rolesIds.includes(3);
+      console.log('🎯 IDs de roles actuales:', rolesIds);
+      console.log('🏠 ¿Tiene rol de Propietario (ID 3)?', tieneRolPropietario);
+      
+      if (!tieneRolPropietario) {
+        console.error('❌ PROBLEMA: El backend no aplicó el cambio de rol. Sigue con roles:', rolesIds);
+        console.error('❌ BACKEND BUG: Recibe request correcto pero no procesa el cambio');
+      }
+      
+      // Si el usuario transferido es el usuario actual, actualizar su información de sesión
+      if (user && user.id === inquilinoId) {
+        console.log('🔄 Actualizando usuario actual después de transferencia');
+        const usuarioActualizado = {
+          ...user,
+          role: 'propietario' as UserRole,
+          tipo_persona: 'propietario'
+        };
+        login(usuarioActualizado);
+        console.log('✅ Usuario actual actualizado a propietario');
+      }
+      
+      // Recargar la lista para reflejar cambios
+      await cargarUsuarios();
+      return resultado;
+
+    } catch (err) {
+      console.error('❌ Error cambiando rol a propietario:', err);
+      setError(err.message || 'Error cambiando rol a propietario');
+      return null;
+    }
+  };
+
+  const cambiarTipoPersona = async (id, nuevoTipo) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      console.log('🔄 useUsuarios: Cambiando tipo de persona vía authz:', id, nuevoTipo);
+
+      // Mapear tipo_persona a rol_id según la documentación del backend
+      const roleMapping = {
+        'inquilino': 4,    // ID 4 = Inquilino
+        'propietario': 3,  // ID 3 = Propietario  
+        'administrador': 1,// ID 1 = Administrador
+        'seguridad': 2     // ID 2 = Seguridad
+      };
+
+      const roleId = roleMapping[nuevoTipo];
+      if (!roleId) {
+        throw new Error(`Tipo de persona no válido: ${nuevoTipo}`);
+      }
+
+      const response = await fetch(`http://127.0.0.1:8000/api/authz/usuarios/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          roles: [roleId] // Cambiar rol del usuario
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+      console.log('✅ useUsuarios: Tipo cambiado con sincronización automática:', resultado);
+      console.log('🔄 useUsuarios: Backend sincronizó automáticamente tipo_persona:', nuevoTipo);
+      
+      // Recargar la lista para ver los cambios sincronizados
+      await cargarUsuarios();
+      return resultado;
+
+    } catch (err) {
+      console.error('❌ useUsuarios: Error cambiando tipo:', err);
+      setError(err.message || 'Error cambiando tipo');
+      return false;
+    }
+  };
+
+  return {
+    usuarios,
+    loading,
+    error,
+    refetch,
+    recargar,
+    crearUsuario,
+    actualizarUsuario,
+    eliminarUsuario,
+    cambiarEstadoUsuario,
+    verUsuario,
+    editarUsuario,
+    transferirPropiedad,
+    cambiarTipoPersona,
+    // Compatibilidad adicional
+    roles: [],
+    totalPages: 1,
+    currentPage: 1,
+    totalCount: usuarios.length,
+    filters: { page: 1, page_size: 10 },
+    setFilters: () => {}
+  };
+}

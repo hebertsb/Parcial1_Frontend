@@ -19,6 +19,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { getViviendas } from '@/features/viviendas/services';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +54,7 @@ import {
 export function GestionInquilinos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [nuevoInquilinoModalOpen, setNuevoInquilinoModalOpen] = useState(false);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState<number | null>(null);
   const [detalleModalOpen, setDetalleModalOpen] = useState(false);
   const [inquilinoSeleccionado, setInquilinoSeleccionado] = useState<any>(null);
 
@@ -202,6 +204,14 @@ export function GestionInquilinos() {
     );
   }
 
+  // Unidades del propietario desde backend
+  const [unidadesPropietario, setUnidadesPropietario] = useState<any[]>([]);
+  useEffect(() => {
+    getViviendas().then(vivs => {
+      setUnidadesPropietario(vivs);
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -260,16 +270,35 @@ export function GestionInquilinos() {
                 Complete el formulario para registrar un nuevo inquilino en sus propiedades
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-6">
-              <RegistroInquilinoForm 
-                onSuccess={() => {
-                  setNuevoInquilinoModalOpen(false);
-                  // Forzar recarga después de un breve delay
-                  setTimeout(() => {
-                    refetch();
-                  }, 500);
-                }}
-              />
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Selecciona la unidad</label>
+                <select
+                  className="border rounded px-3 py-2 w-full"
+                  value={unidadSeleccionada ?? ''}
+                  onChange={e => setUnidadSeleccionada(Number(e.target.value))}
+                  disabled={unidadesPropietario.length === 0}
+                >
+                  <option value="" disabled>Selecciona una unidad...</option>
+                  {unidadesPropietario.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.numero_casa} - {u.bloque} ({u.tipo_vivienda})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {unidadSeleccionada && (
+                <RegistroInquilinoForm 
+                  viviendaId={unidadSeleccionada}
+                  onSuccess={() => {
+                    setNuevoInquilinoModalOpen(false);
+                    setUnidadSeleccionada(null);
+                    setTimeout(() => {
+                      refetch();
+                    }, 500);
+                  }}
+                />
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -302,13 +331,30 @@ export function GestionInquilinos() {
                       Complete el formulario para registrar un nuevo inquilino en sus propiedades
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="mt-6">
-                    <RegistroInquilinoForm 
-                      onSuccess={() => {
-                        setNuevoInquilinoModalOpen(false);
-                        refetch();
-                      }}
-                    />
+                  <div className="mt-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Selecciona la unidad</label>
+                      <select
+                        className="border rounded px-3 py-2 w-full"
+                        value={unidadSeleccionada ?? ''}
+                        onChange={e => setUnidadSeleccionada(Number(e.target.value))}
+                      >
+                        <option value="" disabled>Selecciona una unidad...</option>
+                        {unidadesPropietario.map(u => (
+                          <option key={u.id} value={u.id}>{u.numero}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {unidadSeleccionada && (
+                      <RegistroInquilinoForm 
+                        viviendaId={unidadSeleccionada}
+                        onSuccess={() => {
+                          setNuevoInquilinoModalOpen(false);
+                          setUnidadSeleccionada(null);
+                          refetch();
+                        }}
+                      />
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>

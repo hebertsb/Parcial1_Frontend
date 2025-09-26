@@ -49,8 +49,13 @@ export function ModernLogin() {
         const dashboardRoute = getDashboardRoute(frontendUser.role as UserRole);
         console.log(`🎯 Login: Usuario final:`, frontendUser);
         console.log(`🎯 Login: Rol del usuario:`, frontendUser.role);
+        console.log(`🎯 Login: Tipo de rol:`, typeof frontendUser.role);
         console.log(`🎯 Login: Ruta calculada:`, dashboardRoute);
         console.log(`🎯 Login: Redirigiendo ${frontendUser.role} a ${dashboardRoute}`);
+        
+        // Debug de la función getDashboardRoute
+        console.log(`🔍 Login: Verificando función getDashboardRoute para rol "${frontendUser.role}"`);
+        
         router.push(dashboardRoute)
       } else {
         setError("Invalid email or password")
