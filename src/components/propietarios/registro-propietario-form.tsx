@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, Home, User } from 'lucide-react';
+import { Loader2, CheckCircle, Home, User, Key } from 'lucide-react';
 import { usePropietarios } from '@/hooks/usePropietarios';
 import type { SolicitudRegistroPropietario } from '@/features/propietarios/services';
+import { FotoReconocimientoCapture } from '@/components/facial/foto-reconocimiento-capture';
 
 export function RegistroPropietarioForm() {
   const { enviarSolicitudRegistro, loading, error } = usePropietarios();
@@ -32,7 +33,12 @@ export function RegistroPropietarioForm() {
     direccion: '',
     numero_unidad: '',
     tipo_unidad: '',
-    observaciones: ''
+    observaciones: '',
+    // NUEVO: Reconocimiento facial
+    fotos_base64: [],
+    acepta_terminos: false,
+    password: '',
+    confirm_password: ''
   });
 
   const handleInputChange = (field: keyof SolicitudRegistroPropietario) => (
@@ -51,8 +57,43 @@ export function RegistroPropietarioForm() {
     }));
   };
 
+  const handleFotosChange = (fotos: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      fotos_base64: fotos
+    }));
+  };
+
+  const handleTerminosChange = (acepta: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      acepta_terminos: acepta
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validaciones adicionales
+    if (!formData.acepta_terminos) {
+      alert('Debes aceptar los términos y condiciones');
+      return;
+    }
+
+    if ((formData.fotos_base64?.length || 0) < 1) {
+      alert('Debes tomar al menos una foto para el reconocimiento facial');
+      return;
+    }
+
+    if (formData.password !== formData.confirm_password) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (!formData.password || formData.password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
     
     const resultado = await enviarSolicitudRegistro(formData);
     
@@ -70,7 +111,11 @@ export function RegistroPropietarioForm() {
         direccion: '',
         numero_unidad: '',
         tipo_unidad: '',
-        observaciones: ''
+        observaciones: '',
+        fotos_base64: [],
+        acepta_terminos: false,
+        password: '',
+        confirm_password: ''
       });
     }
   };
@@ -256,6 +301,91 @@ export function RegistroPropietarioForm() {
             </div>
           </div>
 
+          {/* Reconocimiento Facial - NUEVA SECCIÓN */}
+          <div className="space-y-4">
+            <FotoReconocimientoCapture 
+              onFotosChange={handleFotosChange}
+              fotos={formData.fotos_base64 || []}
+              maxFotos={3}
+              requeridas={true}
+            />
+          </div>
+
+          {/* Seguridad - NUEVA SECCIÓN */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Key className="h-5 w-5" />
+              <h3 className="font-semibold">Configuración de Seguridad</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="password">Contraseña *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange('password')}
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="confirm_password">Confirmar Contraseña *</Label>
+                <Input
+                  id="confirm_password"
+                  type="password"
+                  value={formData.confirm_password}
+                  onChange={handleInputChange('confirm_password')}
+                  placeholder="Repetir contraseña"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Términos y Condiciones - NUEVA SECCIÓN */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 border-b pb-2">
+              <CheckCircle className="h-5 w-5" />
+              <h3 className="font-semibold">Términos y Condiciones</h3>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="space-y-2 text-sm text-gray-700 max-h-32 overflow-y-auto">
+                <p><strong>Reconocimiento Facial:</strong></p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Autorizo el uso de mi imagen facial para fines de autenticación y seguridad</li>
+                  <li>Las imágenes serán procesadas para generar patrones biométricos únicos</li>
+                  <li>Los datos biométricos se almacenarán de forma segura y encriptada</li>
+                  <li>Solo se utilizarán para acceso al sistema y control de seguridad del edificio</li>
+                </ul>
+                
+                <p><strong>Protección de Datos:</strong></p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Mis datos personales serán tratados conforme a la ley de protección de datos</li>
+                  <li>Solo se compartirán con personal autorizado del edificio</li>
+                  <li>Puedo solicitar la eliminación de mis datos en cualquier momento</li>
+                </ul>
+              </div>
+              
+              <div className="mt-4 flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  id="acepta_terminos"
+                  checked={formData.acepta_terminos}
+                  onChange={(e) => handleTerminosChange(e.target.checked)}
+                  className="mt-0.5"
+                  required
+                />
+                <Label htmlFor="acepta_terminos" className="text-sm">
+                  Acepto los términos y condiciones, incluyendo el uso de reconocimiento facial *
+                </Label>
+              </div>
+            </div>
+          </div>
+
           {/* Observaciones */}
           <div>
             <Label htmlFor="observaciones">Observaciones</Label>
@@ -280,8 +410,10 @@ export function RegistroPropietarioForm() {
             <h4 className="font-medium text-blue-900 mb-2">Información Importante:</h4>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Su solicitud será revisada por el administrador</li>
+              <li>• Las fotos de reconocimiento facial son obligatorias</li>
+              <li>• Sus imágenes se almacenarán de forma segura y encriptada</li>
               <li>• Recibirá una notificación por email sobre el estado de su solicitud</li>
-              <li>• Una vez aprobada, podrá acceder al sistema con sus credenciales</li>
+              <li>• Una vez aprobada, podrá acceder con reconocimiento facial</li>
               <li>• Los campos marcados con (*) son obligatorios</li>
             </ul>
           </div>

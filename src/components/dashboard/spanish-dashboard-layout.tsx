@@ -200,22 +200,75 @@ export function SpanishDashboardLayout({ children }: SpanishDashboardLayoutProps
               <Moon className="w-4 h-4" />
             </Button>
             
-            {/* User Info and Logout */}
-            <div className="flex items-center space-x-2">
-              <div className="hidden md:flex flex-col text-right">
-                <span className="text-sm font-medium text-white">{user?.name || 'Usuario'}</span>
-                <span className="text-xs text-gray-400">{user?.role || 'Role'}</span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center space-x-2"
-                onClick={handleLogout}
+            {/* User Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="flex items-center space-x-2 text-white hover:bg-[#1f1f1f] h-auto py-2"
+                >
+                  <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="hidden md:flex flex-col items-start">
+                    <span className="text-sm font-medium">{user?.name || 'Usuario'}</span>
+                    <span className="text-xs text-gray-400">administrador</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="end" 
+                className="w-56 bg-[#111111] border-[#2a2a2a] text-white"
               >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden md:inline text-sm">Cerrar Sesión</span>
-              </Button>
-            </div>
+                <DropdownMenuLabel className="text-gray-300">
+                  Sistema Administrador
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-[#2a2a2a]" />
+                
+                <DropdownMenuItem 
+                  onClick={() => router.push('/admin/perfil')}
+                  className="text-gray-200 hover:bg-[#1f1f1f] cursor-pointer"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Ver Perfil
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  onClick={() => router.push('/admin/perfil/editar')}
+                  className="text-gray-200 hover:bg-[#1f1f1f] cursor-pointer"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Editar Perfil
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  onClick={() => router.push('/admin/configuracion/password')}
+                  className="text-gray-200 hover:bg-[#1f1f1f] cursor-pointer"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Cambiar Contraseña
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  onClick={() => router.push('/admin/configuracion')}
+                  className="text-gray-200 hover:bg-[#1f1f1f] cursor-pointer"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configuración
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator className="bg-[#2a2a2a]" />
+                
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-400 hover:bg-red-900/20 cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Cerrar Sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

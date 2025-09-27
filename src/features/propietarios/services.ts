@@ -23,6 +23,11 @@ export interface SolicitudRegistroPropietario {
   numero_unidad?: string;
   tipo_unidad?: string;
   observaciones?: string;
+  // NUEVO: Reconocimiento facial
+  fotos_base64?: string[];
+  acepta_terminos?: boolean;
+  password?: string;
+  confirm_password?: string;
 }
 
 export interface SolicitudPendiente {
@@ -37,6 +42,9 @@ export interface SolicitudPendiente {
   fecha_solicitud: string;
   observaciones?: string;
   motivo_rechazo?: string;
+  // NUEVO: Reconocimiento facial
+  fotos_reconocimiento_urls?: string[];
+  tiene_reconocimiento_facial?: boolean;
 }
 
 export interface PropietarioRegistrado {
@@ -97,9 +105,15 @@ export const propietariosService = {
       
       console.log('📝 Propietarios: Datos transformados para backend:', backendData);
       
+      // NUEVO ENDPOINT: Usar el endpoint actualizado con reconocimiento facial
       const response = await apiClient.post<{ mensaje: string; solicitud_id: number }>(
-        '/authz/propietarios/solicitud/',
-        backendData
+        '/api/authz/propietarios/registrar-solicitud/',
+        {
+          ...backendData,
+          // Agregar campos requeridos para reconocimiento facial
+          fotos_base64: data.fotos_base64 || [],
+          acepta_terminos: data.acepta_terminos || true
+        }
       );
       
       console.log('✅ Propietarios: Solicitud enviada exitosamente');
@@ -149,18 +163,22 @@ export const propietariosService = {
   },
 
   /**
-   * Aprobar solicitud de propietario
+   * Aprobar solicitud de propietario - ACTUALIZADO para reconocimiento facial
    */
-  async aprobarSolicitud(solicitudId: number, observaciones?: string): Promise<ApiResponse<{ mensaje: string }>> {
+  async aprobarSolicitud(solicitudId: number, observaciones?: string, password?: string): Promise<ApiResponse<{ mensaje: string }>> {
     try {
-      console.log('✅ Propietarios: Aprobando solicitud...', solicitudId);
+      console.log('✅ Propietarios: Aprobando solicitud con reconocimiento facial...', solicitudId);
       
       const response = await apiClient.post<{ mensaje: string }>(
-        `/authz/propietarios/admin/solicitudes/${solicitudId}/aprobar/`,
-        { observaciones }
+        `/api/authz/propietarios/aprobar-solicitud/${solicitudId}/`,
+        { 
+          observaciones,
+          password: password || 'TempPass123!',
+          password_confirm: password || 'TempPass123!'
+        }
       );
       
-      console.log('✅ Propietarios: Solicitud aprobada exitosamente');
+      console.log('✅ Propietarios: Solicitud aprobada exitosamente con reconocimiento facial');
       return response;
     } catch (error: any) {
       console.error('❌ Propietarios: Error aprobando solicitud:', error);

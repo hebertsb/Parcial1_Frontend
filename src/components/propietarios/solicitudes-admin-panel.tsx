@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { usePropietarios } from '@/hooks/usePropietarios';
 import type { SolicitudPendiente } from '@/features/propietarios/services';
+import { FotosReconocimientoView } from '@/components/facial/fotos-reconocimiento-view';
 
 export function SolicitudesAdminPanel() {
   const { 
@@ -308,6 +309,14 @@ export function SolicitudesAdminPanel() {
                   </div>
                 </div>
               </div>
+
+              {/* Fotos de Reconocimiento Facial - NUEVA SECCIÓN */}
+              <FotosReconocimientoView
+                fotosUrls={selectedSolicitud.fotos_reconocimiento_urls}
+                solicitudId={selectedSolicitud.id}
+                nombreSolicitante={`${selectedSolicitud.nombres} ${selectedSolicitud.apellidos}`}
+                tieneReconocimiento={selectedSolicitud.tiene_reconocimiento_facial}
+              />
 
               {/* Observaciones */}
               {selectedSolicitud.observaciones && (

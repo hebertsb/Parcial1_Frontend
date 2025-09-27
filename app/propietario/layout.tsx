@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
+import { PropietarioNavbar } from '@/components/layout/propietario-navbar';
 
 export default function PropietarioLayout({
   children,
@@ -91,5 +92,12 @@ export default function PropietarioLayout({
   }
 
   // Authorized access
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen bg-background">
+      <PropietarioNavbar />
+      <main className="container mx-auto px-4 py-6">
+        {children}
+      </main>
+    </div>
+  );
 }

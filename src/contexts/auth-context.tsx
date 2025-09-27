@@ -9,6 +9,7 @@ interface AuthContextType extends AuthState {
   login: (user: User) => void
   logout: () => Promise<void>
   clearExpiredSession: () => void
+  updateUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -122,7 +123,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  return <AuthContext.Provider value={{ ...authState, login, logout, clearExpiredSession }}>{children}</AuthContext.Provider>
+  const updateUser = (user: User) => {
+    console.log('🔄 AuthContext updateUser: Actualizando usuario:', user);
+    setCurrentUser(user, true);
+    setAuthState({
+      user,
+      isLoading: false,
+      isAuthenticated: true,
+    });
+    console.log('✅ AuthContext updateUser: Usuario actualizado');
+  }
+
+  return <AuthContext.Provider value={{ ...authState, login, logout, clearExpiredSession, updateUser }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

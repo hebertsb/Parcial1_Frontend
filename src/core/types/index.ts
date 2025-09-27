@@ -17,6 +17,18 @@ export interface User {
   unitNumber?: string;
   phone?: string;
   avatar?: string;
+  telefono?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigo_postal?: string;
+  numero_unidad?: string;
+  torre?: string;
+  area_unidad?: number;
+  tipo_unidad?: string;
+  // NUEVO: Reconocimiento facial
+  fotos_reconocimiento_urls?: string[];
+  reconocimiento_facial_activo?: boolean;
+  fecha_enrolamiento?: string;
 }
 
 export interface DjangoUser {

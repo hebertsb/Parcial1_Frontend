@@ -22,7 +22,10 @@ import {
   Home, 
   AlertCircle, 
   RefreshCw,
-  Loader2
+  Loader2,
+  Camera,
+  Eye,
+  Shield
 } from 'lucide-react';
 
 import { 
@@ -30,6 +33,8 @@ import {
   procesarSolicitudCompleta,
   type SolicitudRegistroAPI 
 } from '@/features/admin/solicitudes-service';
+import { useFaceRecognition } from '@/features/facial/hooks';
+import { registroFacialService } from '@/features/facial/registro-service';
 
 // Componente de estado de backend
 const BackendStatus: React.FC<{
@@ -60,6 +65,11 @@ export function GestionSolicitudesRegistro() {
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [lastBackendUpdate, setLastBackendUpdate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Estados para enrolamiento facial
+  const [fotosTemporales, setFotosTemporales] = useState<Map<string, File>>(new Map());
+  const [enrolandoId, setEnrolandoId] = useState<number | null>(null);
+  const { enrollFace, loading: enrollLoading, error: enrollError } = useFaceRecognition();
 
   const viviendas = [
     '006D', '007C', '008E', '009C', '010C', '011D', '012B', '013E', '014E', 
@@ -135,7 +145,19 @@ export function GestionSolicitudesRegistro() {
         setSolicitudes(resultado.data || []);
         setIsBackendConnected(true);
         setLastBackendUpdate(new Date());
+        
+        // Debug específico para fotos
         console.log('✅ Solicitudes cargadas desde API');
+        console.log('📸 [DEBUG] Verificando fotos en solicitudes:');
+        resultado.data?.forEach((solicitud, index) => {
+          console.log(`  Solicitud ${index + 1} (ID: ${solicitud.id}) - ${solicitud.primer_nombre} ${solicitud.primer_apellido}:`);
+          console.log(`    - foto_perfil:`, solicitud.foto_perfil ? 'TIENE FOTO' : 'SIN FOTO');
+          console.log(`    - Valor foto_perfil:`, solicitud.foto_perfil);
+          if (solicitud.foto_perfil) {
+            console.log(`    - Tamaño foto:`, solicitud.foto_perfil.length, 'caracteres base64');
+            console.log(`    - Comienza con data:`, solicitud.foto_perfil.startsWith('data:'));
+          }
+        });
       } else {
         setEmailError(resultado.message || 'Error al cargar solicitudes');
         setIsBackendConnected(false);
@@ -260,6 +282,145 @@ export function GestionSolicitudesRegistro() {
     }
   };
 
+  // Funciones para enrolamiento facial
+  const cargarFotosTemporales = async () => {
+    const nuevasFotos = new Map<string, File>();
+    
+    for (const solicitud of solicitudes) {
+      if (solicitud.estado === 'aprobado') {
+        const foto = await registroFacialService.recuperarFotoTemporal(solicitud.id.toString());
+        if (foto) {
+          nuevasFotos.set(solicitud.id.toString(), foto);
+        }
+      }
+    }
+    
+    setFotosTemporales(nuevasFotos);
+  };
+
+  const handleVerFoto = (foto: File) => {
+    const url = URL.createObjectURL(foto);
+    const ventana = window.open();
+    if (ventana) {
+      ventana.document.write(`
+        <html>
+          <head><title>Vista previa de foto</title></head>
+          <body style="margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#000;">
+            <img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;" />
+          </body>
+        </html>
+      `);
+    }
+    // Limpiar URL después de un tiempo
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+
+  const handleEnrolarFoto = async (solicitud: SolicitudRegistroAPI) => {
+    const foto = fotosTemporales.get(solicitud.id.toString());
+    if (!foto) {
+      alert('No se encontró la foto para esta solicitud');
+      return;
+    }
+
+    // Necesitamos el personaId del usuario creado
+    // Esto se podría obtener de la respuesta del procesamiento o hacer una consulta
+    const personaId = solicitud.id; // Temporal - necesitaríamos el ID real del usuario creado
+    
+    setEnrolandoId(solicitud.id);
+    
+    try {
+      const resultado = await enrollFace(personaId, foto, 'copropietario');
+      
+      if (resultado.success) {
+        // Limpiar foto temporal después del enrolamiento exitoso
+        registroFacialService.limpiarFotoTemporal(solicitud.id.toString());
+        
+        // Actualizar el mapa local
+        const nuevasFotos = new Map(fotosTemporales);
+        nuevasFotos.delete(solicitud.id.toString());
+        setFotosTemporales(nuevasFotos);
+        
+        alert('✅ Enrolamiento facial completado exitosamente');
+      } else {
+        alert(`❌ Error en enrolamiento: ${resultado.error}`);
+      }
+    } catch (error) {
+      console.error('Error enrolando foto:', error);
+      alert('❌ Error procesando enrolamiento facial');
+    } finally {
+      setEnrolandoId(null);
+    }
+  };
+
+  const tieneFotoTemporal = (solicitudId: number): boolean => {
+    return fotosTemporales.has(solicitudId.toString());
+  };
+
+  // Función para ver foto del backend
+  const handleVerFotoBackend = (fotoBase64: string, nombreSolicitante: string) => {
+    if (!fotoBase64) return;
+    
+    const ventana = window.open();
+    if (ventana) {
+      // Verificar si la imagen ya tiene el prefijo data:image
+      const imageSrc = fotoBase64.startsWith('data:') 
+        ? fotoBase64 
+        : `data:image/jpeg;base64,${fotoBase64}`;
+      
+      ventana.document.write(`
+        <html>
+          <head>
+            <title>Foto de ${nombreSolicitante}</title>
+            <style>
+              body { 
+                margin: 20px; 
+                background: #f5f5f5; 
+                font-family: Arial, sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 80vh;
+              }
+              h3 { color: #333; margin-bottom: 20px; text-align: center; }
+              img { 
+                max-width: 90%; 
+                max-height: 70vh; 
+                object-fit: contain; 
+                border: 2px solid #ccc; 
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+              }
+            </style>
+          </head>
+          <body>
+            <h3>📸 Foto de Solicitud - ${nombreSolicitante}</h3>
+            <img src="${imageSrc}" alt="Foto de ${nombreSolicitante}" />
+          </body>
+        </html>
+      `);
+    }
+  };
+
+  // Función para verificar si la solicitud tiene foto del backend
+  const tieneFotoBackend = (solicitud: SolicitudRegistroAPI): boolean => {
+    return !!(solicitud.foto_perfil && solicitud.foto_perfil.trim() !== '');
+  };
+
+  // Función para verificar si hay foto base64 temporal
+  const tieneFotoBase64Temporal = (solicitudId: number): boolean => {
+    const foto = registroFacialService.recuperarFotoBase64Temporal(solicitudId.toString());
+    return !!foto;
+  };
+
+  // Función para ver foto base64 temporal
+  const handleVerFotoBase64Temporal = (solicitudId: number, nombreSolicitante: string) => {
+    const fotoBase64 = registroFacialService.recuperarFotoBase64Temporal(solicitudId.toString());
+    if (fotoBase64) {
+      handleVerFotoBackend(fotoBase64, nombreSolicitante);
+    }
+  };
+
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'pendiente':
@@ -295,6 +456,12 @@ export function GestionSolicitudesRegistro() {
   useEffect(() => {
     cargarSolicitudes();
   }, []);
+
+  useEffect(() => {
+    if (solicitudes.length > 0) {
+      cargarFotosTemporales();
+    }
+  }, [solicitudes]);
 
   return (
     <div className="space-y-6">
@@ -370,6 +537,7 @@ export function GestionSolicitudesRegistro() {
                   <TableHead>Unidad</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Fecha</TableHead>
+                  <TableHead>Foto</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -393,6 +561,82 @@ export function GestionSolicitudesRegistro() {
                       <TableCell>{getEstadoBadge(solicitud.estado)}</TableCell>
                       <TableCell className="text-sm">
                         {formatearFecha(solicitud.fecha_solicitud)}
+                      </TableCell>
+                      <TableCell>
+                        {/* Mostrar fotos del backend y acciones de enrolamiento */}
+                        <div className="flex items-center gap-2">
+                          {/* Foto enviada con la solicitud (del backend) */}
+                          {tieneFotoBackend(solicitud) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleVerFotoBackend(
+                                solicitud.foto_perfil!, 
+                                `${solicitud.primer_nombre} ${solicitud.primer_apellido}`
+                              )}
+                              className="flex items-center gap-1"
+                            >
+                              <Camera className="w-3 h-3 text-blue-500" />
+                              <span className="text-xs">Ver Foto</span>
+                            </Button>
+                          )}
+
+                          {/* Foto temporal base64 (guardada localmente) */}
+                          {!tieneFotoBackend(solicitud) && tieneFotoBase64Temporal(solicitud.id) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleVerFotoBase64Temporal(
+                                solicitud.id,
+                                `${solicitud.primer_nombre} ${solicitud.primer_apellido}`
+                              )}
+                              className="flex items-center gap-1"
+                            >
+                              <Camera className="w-3 h-3 text-green-500" />
+                              <span className="text-xs">Ver Foto Local</span>
+                            </Button>
+                          )}
+                          
+                          {/* Fotos temporales para enrolamiento */}
+                          {tieneFotoTemporal(solicitud.id) && (
+                            <>
+                              <Camera className="w-4 h-4 text-green-500" />
+                              {solicitud.estado === 'aprobado' && (
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const foto = fotosTemporales.get(solicitud.id.toString());
+                                      if (foto) handleVerFoto(foto);
+                                    }}
+                                    title="Ver foto temporal"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEnrolarFoto(solicitud)}
+                                    disabled={enrolandoId === solicitud.id || isLoading}
+                                    title="Enrolar facial"
+                                  >
+                                    {enrolandoId === solicitud.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Shield className="w-3 h-3" />
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Mensaje si no hay fotos */}
+                          {!tieneFotoBackend(solicitud) && !tieneFotoTemporal(solicitud.id) && !tieneFotoBase64Temporal(solicitud.id) && (
+                            <span className="text-xs text-gray-500">Sin foto</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {/* Mostrar botones para TODOS los estados para debug */}

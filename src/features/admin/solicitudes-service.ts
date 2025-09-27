@@ -25,6 +25,7 @@ export interface SolicitudRegistroAPI {
   fecha_solicitud: string;
   observaciones?: string;
   observaciones_admin?: string;
+  foto_perfil?: string | null; // Foto enviada con la solicitud (base64)
   familiares?: Array<{
     nombres: string;
     apellidos: string;

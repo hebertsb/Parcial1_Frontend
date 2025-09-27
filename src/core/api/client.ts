@@ -3,10 +3,10 @@
  * Centralizes all API communication with Django backend
  */
 
-// Environment configuration - ACTUALIZADO según informe del backend
+// Environment configuration - ACTUALIZADO según informe del backend  
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api',
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://127.0.0.1:8000/ws',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws',
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
 } as const;

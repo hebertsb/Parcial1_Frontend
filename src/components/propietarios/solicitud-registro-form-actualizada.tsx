@@ -19,6 +19,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, User, Home, CheckCircle, AlertCircle, Info, UserPlus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { FotoField } from '@/components/ui/foto-field';
+import { registroFacialService } from '@/features/facial/registro-service';
 
 // Schema de validación para familiar
 const familiarSchema = z.object({
@@ -53,6 +55,7 @@ const solicitudRegistroSchema = z.object({
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
   confirm_password: z.string().min(8, 'Confirme la contraseña'),
   observaciones: z.string().optional(),
+  foto: z.instanceof(File).optional(),
   acepta_terminos: z.boolean().refine(val => val === true, 'Debe aceptar los términos y condiciones'),
   familiares: z.array(familiarSchema).optional(),
 }).refine((data) => data.password === data.confirm_password, {
@@ -82,6 +85,7 @@ export function SolicitudRegistroPropietarioFormActualizada() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
 
   const form = useForm<SolicitudRegistroData>({
     resolver: zodResolver(solicitudRegistroSchema),
@@ -97,6 +101,7 @@ export function SolicitudRegistroPropietarioFormActualizada() {
       password: '',
       confirm_password: '',
       observaciones: '',
+      foto: undefined,
       acepta_terminos: false,
       familiares: [],
     },
@@ -130,6 +135,34 @@ export function SolicitudRegistroPropietarioFormActualizada() {
 
       console.log('📝 Enviando solicitud de registro al backend Django:', data);
       
+      // Convertir la foto a base64 si existe
+      let fotoBase64 = '';
+      console.log('📸 [DEBUG] Procesando foto:', data.foto ? 'Foto presente' : 'Sin foto');
+      if (data.foto) {
+        console.log('📸 [DEBUG] Foto details:', {
+          name: data.foto.name,
+          size: data.foto.size,
+          type: data.foto.type
+        });
+        try {
+          fotoBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64String = reader.result as string;
+              // Extraer solo la parte base64 (sin el prefijo data:image/...)
+              const base64Data = base64String.split(',')[1];
+              resolve(base64Data);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(data.foto);
+          });
+          console.log('📸 Foto convertida a base64, tamaño:', fotoBase64.length, 'caracteres');
+        } catch (error) {
+          console.error('❌ Error convirtiendo foto a base64:', error);
+          throw new Error('Error procesando la imagen');
+        }
+      }
+      
       // Preparar datos para el backend usando los nombres de campo correctos según la validación Django
       const solicitudData = {
         nombres: data.primer_nombre,
@@ -143,7 +176,8 @@ export function SolicitudRegistroPropietarioFormActualizada() {
         acepta_tratamiento_datos: true,
         password: data.password,
         password_confirm: data.password,  // Campo requerido por Django
-        confirm_password: data.password  // Campo adicional por seguridad
+        confirm_password: data.password,  // Campo adicional por seguridad
+        fotos_base64: fotoBase64 ? [fotoBase64] : [] // Campo requerido por el backend
         // Nota: familiares no se incluyen en la solicitud inicial según el backend
       };
 
@@ -184,8 +218,32 @@ export function SolicitudRegistroPropietarioFormActualizada() {
       const result = await response.json();
       console.log('✅ Solicitud creada exitosamente:', result);
       
+      // Guardar foto temporalmente para mostrar en panel admin y enrolamiento posterior
+      if (data.foto && result.id && fotoBase64) {
+        console.log('📸 Guardando foto temporal para solicitud ID:', result.id);
+        
+        // Guardar archivo para enrolamiento
+        const fotoGuardada = await registroFacialService.guardarFotoTemporal(
+          result.id.toString(), 
+          data.foto
+        );
+        
+        // Guardar base64 para visualización en admin
+        const base64Guardado = await registroFacialService.guardarFotoBase64Temporal(
+          result.id.toString(),
+          fotoBase64
+        );
+        
+        if (fotoGuardada && base64Guardado) {
+          console.log('✅ Foto guardada temporalmente para admin y enrolamiento');
+        } else {
+          console.error('❌ Error guardando foto temporal');
+        }
+      }
+      
       setSubmitStatus('success');
       form.reset();
+      setFotoPreview(null);
       
     } catch (error) {
       console.error('❌ Error enviando solicitud:', error);
@@ -642,6 +700,32 @@ export function SolicitudRegistroPropietarioFormActualizada() {
                 </Card>
               ))}
             </div>
+
+            {/* Campo de Foto */}
+            <FormField
+              control={form.control}
+              name="foto"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fotografía Personal (Opcional)</FormLabel>
+                  <FormControl>
+                    <FotoField
+                      value={field.value}
+                      onChange={(file) => {
+                        console.log('📸 [DEBUG] Foto seleccionada:', file);
+                        field.onChange(file);
+                      }}
+                      preview={fotoPreview}
+                      onPreviewChange={(preview) => {
+                        console.log('📸 [DEBUG] Preview cambiado:', preview ? 'Con imagen' : 'Sin imagen');
+                        setFotoPreview(preview);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Observaciones */}
             <FormField
