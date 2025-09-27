@@ -80,20 +80,37 @@ export function SolicitudesAdminPanel() {
     if (!selectedSolicitud) return;
 
     setActionLoading(true);
-    let resultado = false;
+    let exitoso = false;
 
-    if (actionType === 'aprobar') {
-      resultado = await aprobarSolicitud(selectedSolicitud.id, observaciones);
-    } else if (actionType === 'rechazar') {
-      resultado = await rechazarSolicitud(selectedSolicitud.id, motivoRechazo);
-    }
+    try {
+      if (actionType === 'aprobar') {
+        console.log('📧 Admin Panel: Iniciando aprobación con envío de email...');
+        const respuesta = await aprobarSolicitud(selectedSolicitud.id, observaciones);
+        
+        if (respuesta.success) {
+          exitoso = true;
+          
+          // Mostrar información detallada del email enviado
+          if (respuesta.emailInfo?.email_enviado) {
+            console.log('✅ Admin Panel: Email enviado exitosamente');
+            // El hook ya muestra la alerta con la información
+          } else {
+            console.warn('⚠️ Admin Panel: Problema con el envío del email'); 
+          }
+        }
+      } else if (actionType === 'rechazar') {
+        exitoso = await rechazarSolicitud(selectedSolicitud.id, motivoRechazo);
+      }
 
-    if (resultado) {
-      setDialogOpen(false);
-      setSelectedSolicitud(null);
-      setActionType(null);
-      setObservaciones('');
-      setMotivoRechazo('');
+      if (exitoso) {
+        setDialogOpen(false);
+        setSelectedSolicitud(null);
+        setActionType(null);
+        setObservaciones('');
+        setMotivoRechazo('');
+      }
+    } catch (error) {
+      console.error('❌ Admin Panel: Error en la acción:', error);
     }
 
     setActionLoading(false);
@@ -146,6 +163,14 @@ export function SolicitudesAdminPanel() {
           )}
         </Button>
       </div>
+
+      {/* Información importante sobre emails */}
+      <Alert>
+        <Mail className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Sistema de Emails Automático:</strong> Al aprobar una solicitud, se enviará automáticamente un email al propietario con sus credenciales de acceso (usuario: su email, contraseña: temporal123). El propietario podrá ingresar inmediatamente al sistema.
+        </AlertDescription>
+      </Alert>
 
       {/* Alerta de error */}
       {error && (
@@ -335,9 +360,11 @@ export function SolicitudesAdminPanel() {
                     onClick={() => handleAccion('aprobar')}
                     className="flex-1"
                     variant="default"
+                    title="Aprobar solicitud y enviar credenciales por email"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Aprobar Solicitud
+                    <Mail className="w-4 h-4 mr-1" />
+                    Aprobar y Enviar Email
                   </Button>
                   <Button 
                     onClick={() => handleAccion('rechazar')}
@@ -350,13 +377,26 @@ export function SolicitudesAdminPanel() {
                 </div>
               ) : actionType === 'aprobar' ? (
                 <div className="space-y-4">
+                  <Alert>
+                    <Mail className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Al aprobar esta solicitud:</strong>
+                      <ul className="mt-2 ml-4 list-disc text-sm">
+                        <li>Se creará un usuario con el email: <strong>{selectedSolicitud.email}</strong></li>
+                        <li>Se generará una contraseña temporal: <strong>temporal123</strong></li>
+                        <li>Se enviará un email automático con las credenciales de acceso</li>
+                        <li>El propietario podrá ingresar inmediatamente al sistema</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                  
                   <div>
                     <Label htmlFor="observaciones">Observaciones para el Propietario (Opcional)</Label>
                     <Textarea
                       id="observaciones"
                       value={observaciones}
                       onChange={(e) => setObservaciones(e.target.value)}
-                      placeholder="Información adicional para el nuevo propietario..."
+                      placeholder="Mensaje adicional que se incluirá en el email de bienvenida..."
                       rows={3}
                     />
                   </div>

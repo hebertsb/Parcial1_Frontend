@@ -21,7 +21,14 @@ interface UsePropietariosReturn {
   // Acciones de solicitudes
   enviarSolicitudRegistro: (data: SolicitudRegistroPropietario) => Promise<boolean>;
   cargarSolicitudesPendientes: () => Promise<void>;
-  aprobarSolicitud: (id: number, observaciones?: string) => Promise<boolean>;
+  aprobarSolicitud: (id: number, observaciones?: string) => Promise<{
+    success: boolean;
+    emailInfo?: {
+      email_propietario: string;
+      password_temporal: string;
+      email_enviado: boolean;
+    }
+  }>;
   rechazarSolicitud: (id: number, motivo: string) => Promise<boolean>;
   
   // Acciones de propietarios
@@ -87,26 +94,64 @@ export function usePropietarios(): UsePropietariosReturn {
     }
   }, []);
 
-  const aprobarSolicitud = useCallback(async (id: number, observaciones?: string): Promise<boolean> => {
+  const aprobarSolicitud = useCallback(async (id: number, observaciones?: string): Promise<{
+    success: boolean;
+    emailInfo?: {
+      email_propietario: string;
+      password_temporal: string;
+      email_enviado: boolean;
+    }
+  }> => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('✅ usePropietarios: Aprobando solicitud...', id);
+      console.log('📧 usePropietarios: Aprobando solicitud con envío de email...', id);
       const response = await propietariosService.aprobarSolicitud(id, observaciones);
       
       if (response.success) {
         console.log('✅ usePropietarios: Solicitud aprobada exitosamente');
+        
+        // Información del email enviado
+        const emailInfo = response.data?.data;
+        if (emailInfo) {
+          console.log('📧 Email info:', emailInfo);
+          
+          if (emailInfo.email_enviado) {
+            console.log('✅ Email enviado exitosamente a:', emailInfo.email_propietario);
+            console.log('🔑 Contraseña temporal generada:', emailInfo.password_temporal);
+            
+            // Mostrar notificación de éxito
+            alert(`✅ ¡Solicitud aprobada exitosamente!
+            
+📧 Email enviado a: ${emailInfo.email_propietario}
+🔑 Contraseña temporal: ${emailInfo.password_temporal}
+👤 Usuario creado: ${emailInfo.usuario_creado ? 'Sí' : 'No'}
+
+El propietario recibirá un email con sus credenciales de acceso.`);
+          } else {
+            console.warn('⚠️ Solicitud aprobada pero email no enviado');
+            alert('⚠️ Solicitud aprobada, pero hubo un problema enviando el email. Contacte manualmente al propietario.');
+          }
+        }
+        
         // Recargar solicitudes para actualizar la lista
         await cargarSolicitudesPendientes();
-        return true;
+        return { 
+          success: true, 
+          emailInfo: emailInfo || undefined
+        };
       } else {
         throw new Error(response.message || 'Error al aprobar solicitud');
       }
     } catch (err: any) {
       console.error('❌ usePropietarios: Error aprobando solicitud:', err);
       setError(err.message || 'Error al aprobar solicitud');
-      return false;
+      
+      // Mostrar error específico
+      alert(`❌ Error al aprobar solicitud: ${err.message || 'Error desconocido'}`);
+      
+      return { success: false };
     } finally {
       setLoading(false);
     }

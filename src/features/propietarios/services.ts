@@ -163,22 +163,64 @@ export const propietariosService = {
   },
 
   /**
-   * Aprobar solicitud de propietario - ACTUALIZADO para reconocimiento facial
+   * Obtener todas las solicitudes (para historial)
    */
-  async aprobarSolicitud(solicitudId: number, observaciones?: string, password?: string): Promise<ApiResponse<{ mensaje: string }>> {
+  async obtenerTodasLasSolicitudes(): Promise<ApiResponse<SolicitudPendiente[]>> {
     try {
-      console.log('✅ Propietarios: Aprobando solicitud con reconocimiento facial...', solicitudId);
+      console.log('📋 Propietarios: Obteniendo todas las solicitudes...');
       
-      const response = await apiClient.post<{ mensaje: string }>(
-        `/api/authz/propietarios/aprobar-solicitud/${solicitudId}/`,
+      const response = await apiClient.get<SolicitudPendiente[]>(
+        '/authz/propietarios/admin/solicitudes/?incluir_todas=true'
+      );
+      
+      console.log('✅ Propietarios: Todas las solicitudes obtenidas:', response.data?.length || 0);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Propietarios: Error obteniendo todas las solicitudes:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Aprobar solicitud de propietario - CON ENVÍO AUTOMÁTICO DE EMAIL
+   * Usa el endpoint del backend que ya tiene configurado el envío de emails
+   */
+  async aprobarSolicitud(solicitudId: number, observaciones?: string): Promise<ApiResponse<{ 
+    mensaje: string;
+    data?: {
+      email_propietario: string;
+      password_temporal: string;
+      usuario_creado: boolean;
+      email_enviado: boolean;
+    }
+  }>> {
+    try {
+      console.log('📧 Propietarios: Aprobando solicitud con envío automático de email...', solicitudId);
+      
+      // USAR ENDPOINT CORRECTO DEL BACKEND QUE ENVÍA EMAILS
+      const response = await apiClient.post<{ 
+        mensaje: string;
+        data?: {
+          email_propietario: string;
+          password_temporal: string;
+          usuario_creado: boolean;
+          email_enviado: boolean;
+        }
+      }>(
+        `/authz/propietarios/admin/solicitudes/${solicitudId}/aprobar/`,
         { 
-          observaciones,
-          password: password || 'TempPass123!',
-          password_confirm: password || 'TempPass123!'
+          observaciones_aprobacion: observaciones || 'Solicitud aprobada por el administrador'
         }
       );
       
-      console.log('✅ Propietarios: Solicitud aprobada exitosamente con reconocimiento facial');
+      if (response.data?.data?.email_enviado) {
+        console.log('✅ Propietarios: Solicitud aprobada y email enviado exitosamente');
+        console.log('📧 Email enviado a:', response.data.data.email_propietario);
+        console.log('🔑 Contraseña temporal:', response.data.data.password_temporal);
+      } else {
+        console.warn('⚠️ Propietarios: Solicitud aprobada pero el email puede no haberse enviado');
+      }
+      
       return response;
     } catch (error: any) {
       console.error('❌ Propietarios: Error aprobando solicitud:', error);
