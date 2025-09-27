@@ -1,379 +1,251 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Users, Phone, Mail, Calendar, Edit, Trash2, UserPlus, Home, Car } from "lucide-react"
+import { Users, Phone, Mail, Calendar, Home, RefreshCw, Search } from "lucide-react"
+import { apiClient } from '@/core/api/client'
 
-// Mock data for co-owners
-const coOwners = [
-  {
-    id: "1",
-    name: "María González",
-    email: "maria.gonzalez@email.com",
-    phone: "+1 (555) 123-4567",
-    unit: "A-301",
-    role: "Propietario Principal",
-    ownership: 60,
-    joinDate: "2022-03-15",
-    avatar: "/professional-woman-headshot.png",
-    status: "activo",
-    parkingSpots: ["P-A301-1", "P-A301-2"],
-    emergencyContact: "Carlos González - +1 (555) 987-6543",
-  },
-  {
-    id: "2",
-    name: "Roberto Silva",
-    email: "roberto.silva@email.com",
-    phone: "+1 (555) 234-5678",
-    unit: "A-301",
-    role: "Copropietario",
-    ownership: 40,
-    joinDate: "2022-03-15",
-    avatar: "/professional-man-headshot.png",
-    status: "activo",
-    parkingSpots: [],
-    emergencyContact: "Ana Silva - +1 (555) 876-5432",
-  },
-  {
-    id: "3",
-    name: "Carmen Rodríguez",
-    email: "carmen.rodriguez@email.com",
-    phone: "+1 (555) 345-6789",
-    unit: "B-205",
-    role: "Propietario Principal",
-    ownership: 100,
-    joinDate: "2023-01-20",
-    avatar: "/professional-woman-headshot-business.png",
-    status: "activo",
-    parkingSpots: ["P-B205-1"],
-    emergencyContact: "Luis Rodríguez - +1 (555) 765-4321",
-  },
-  {
-    id: "4",
-    name: "Diego Martínez",
-    email: "diego.martinez@email.com",
-    phone: "+1 (555) 456-7890",
-    unit: "C-102",
-    role: "Propietario Principal",
-    ownership: 70,
-    joinDate: "2023-06-10",
-    avatar: "/professional-man-headshot-casual.jpg",
-    status: "pendiente",
-    parkingSpots: ["P-C102-1"],
-    emergencyContact: "Elena Martínez - +1 (555) 654-3210",
-  },
-  {
-    id: "5",
-    name: "Isabella Torres",
-    email: "isabella.torres@email.com",
-    phone: "+1 (555) 567-8901",
-    unit: "C-102",
-    role: "Copropietario",
-    ownership: 30,
-    joinDate: "2023-06-10",
-    avatar: "/young-professional-woman-headshot.png",
-    status: "activo",
-    parkingSpots: [],
-    emergencyContact: "Miguel Torres - +1 (555) 543-2109",
-  },
-]
+interface PropietarioData {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono?: string;
+  vivienda_info?: {
+    numero_casa: string;
+    bloque: string;
+    tipo_vivienda: string;
+  };
+  tipo_tenencia: string;
+  fecha_inicio?: string;
+  estado?: string;
+  persona_info?: {
+    nombre: string;
+    apellido: string;
+    email: string;
+    telefono?: string;
+  };
+}
 
 export function CoOwnersManagement() {
-  const [selectedUnit, setSelectedUnit] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [propietarios, setPropietarios] = useState<PropietarioData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredOwners = coOwners.filter((owner) => {
-    const matchesUnit = selectedUnit === "all" || owner.unit === selectedUnit
-    const matchesSearch =
-      owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      owner.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      owner.unit.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesUnit && matchesSearch
-  })
+  const cargarPropietarios = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const units = [...new Set(coOwners.map((owner) => owner.unit))].sort()
+      const response = await apiClient.get('/propiedades/');
+      const data = (response.data as any)?.results || response.data || [];
+      
+      // Filtrar solo propietarios
+      const propietariosList = data.filter((item: any) => 
+        item.tipo_tenencia === 'propietario'
+      );
+
+      console.log('🏠 Propietarios cargados:', propietariosList);
+      setPropietarios(propietariosList);
+
+    } catch (err) {
+      console.error('Error cargando propietarios:', err);
+      setError('Error al cargar los propietarios');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarPropietarios();
+  }, []);
+
+  const filteredPropietarios = propietarios.filter((propietario) => {
+    const nombreCompleto = `${propietario.persona_info?.nombre || ''} ${propietario.persona_info?.apellido || ''}`.toLowerCase();
+    const email = (propietario.persona_info?.email || '').toLowerCase();
+    const unidad = `${propietario.vivienda_info?.bloque || ''}-${propietario.vivienda_info?.numero_casa || ''}`.toLowerCase();
+    
+    return searchTerm === "" || 
+           nombreCompleto.includes(searchTerm.toLowerCase()) ||
+           email.includes(searchTerm.toLowerCase()) ||
+           unidad.includes(searchTerm.toLowerCase());
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-white">Cargando propietarios...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-red-400 mb-4">{error}</div>
+        <Button onClick={cargarPropietarios} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 bg-[#0a0a0a] text-white min-h-screen">
+    <div className="space-y-6 bg-[#0a0a0a] text-white">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-balance text-white">Gestión de Copropietarios</h2>
-          <p className="text-gray-400">Administra los copropietarios y su información</p>
+          <h2 className="text-2xl font-bold text-white">Gestión de Propietarios</h2>
+          <p className="text-gray-400">Administra los propietarios del condominio ({propietarios.length} registrados)</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Agregar Copropietario
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl bg-[#111111] border-[#1f1f1f] text-white">
-            <DialogHeader>
-              <DialogTitle className="text-white">Agregar Nuevo Copropietario</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Agregar un nuevo copropietario al sistema de gestión
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-white">
-                  Nombre Completo
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="Ingrese nombre completo"
-                  className="bg-[#1a1a1a] border-[#2a2a2a] text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Ingrese email"
-                  className="bg-[#1a1a1a] border-[#2a2a2a] text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-white">
-                  Teléfono
-                </Label>
-                <Input id="phone" placeholder="Ingrese teléfono" className="bg-[#1a1a1a] border-[#2a2a2a] text-white" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="unit" className="text-white">
-                  Unidad
-                </Label>
-                <Select>
-                  <SelectTrigger className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
-                    <SelectValue placeholder="Seleccionar unidad" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#111111] border-[#1f1f1f]">
-                    {units.map((unit) => (
-                      <SelectItem key={unit} value={unit} className="text-white hover:bg-[#1a1a1a]">
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role" className="text-white">
-                  Rol
-                </Label>
-                <Select>
-                  <SelectTrigger className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
-                    <SelectValue placeholder="Seleccionar rol" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#111111] border-[#1f1f1f]">
-                    <SelectItem value="primary" className="text-white hover:bg-[#1a1a1a]">
-                      Propietario Principal
-                    </SelectItem>
-                    <SelectItem value="co-owner" className="text-white hover:bg-[#1a1a1a]">
-                      Copropietario
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ownership" className="text-white">
-                  Porcentaje de Propiedad
-                </Label>
-                <Input
-                  id="ownership"
-                  type="number"
-                  placeholder="Ingrese porcentaje"
-                  className="bg-[#1a1a1a] border-[#2a2a2a] text-white"
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="emergency" className="text-white">
-                  Contacto de Emergencia
-                </Label>
-                <Input
-                  id="emergency"
-                  placeholder="Nombre y teléfono"
-                  className="bg-[#1a1a1a] border-[#2a2a2a] text-white"
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="notes" className="text-white">
-                  Notas Adicionales
-                </Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Información adicional..."
-                  className="bg-[#1a1a1a] border-[#2a2a2a] text-white"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
-                className="border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent"
-              >
-                Cancelar
-              </Button>
-              <Button onClick={() => setIsAddDialogOpen(false)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Agregar Copropietario
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button onClick={cargarPropietarios} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
+      {/* Search */}
+      <div className="flex gap-4 items-center">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Buscar por nombre, email o unidad..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder:text-gray-400"
+            className="pl-10 bg-[#1a1a1a] border-[#2a2a2a] text-white"
           />
         </div>
-        <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-          <SelectTrigger className="w-48 bg-[#1a1a1a] border-[#2a2a2a] text-white">
-            <SelectValue placeholder="Filtrar por unidad" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#111111] border-[#1f1f1f]">
-            <SelectItem value="all" className="text-white hover:bg-[#1a1a1a]">
-              Todas las Unidades
-            </SelectItem>
-            {units.map((unit) => (
-              <SelectItem key={unit} value={unit} className="text-white hover:bg-[#1a1a1a]">
-                Unidad {unit}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Co-Owners Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredOwners.map((owner) => (
-          <Card key={owner.id} className="bg-[#111111] border-[#1f1f1f] hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={owner.avatar || "/placeholder.svg"} alt={owner.name} />
-                    <AvatarFallback className="bg-[#2a2a2a] text-white">
-                      {owner.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-[#111111] border-[#1f1f1f]">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-blue-500/20">
+                <Users className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Total Propietarios</p>
+                <p className="text-2xl font-bold text-white">{propietarios.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#111111] border-[#1f1f1f]">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-green-500/20">
+                <Home className="w-6 h-6 text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Unidades con Propietario</p>
+                <p className="text-2xl font-bold text-white">{propietarios.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#111111] border-[#1f1f1f]">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-purple-500/20">
+                <Calendar className="w-6 h-6 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Resultados</p>
+                <p className="text-2xl font-bold text-white">{filteredPropietarios.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Lista de Propietarios */}
+      {filteredPropietarios.length === 0 ? (
+        <div className="text-center py-12">
+          <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2 text-white">
+            {searchTerm ? 'No se encontraron resultados' : 'No hay propietarios registrados'}
+          </h3>
+          <p className="text-gray-400 mb-4">
+            {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Los propietarios aparecerán aquí una vez registrados'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPropietarios.map((propietario) => (
+            <Card key={propietario.id} className="bg-[#111111] border-[#1f1f1f] hover:border-[#2a2a2a] transition-colors">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src="/placeholder-user.jpg" />
+                    <AvatarFallback className="bg-blue-600 text-white">
+                      {(propietario.persona_info?.nombre || '').charAt(0)}
+                      {(propietario.persona_info?.apellido || '').charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <CardTitle className="text-lg text-white">{owner.name}</CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <Badge
-                        variant={owner.role === "Propietario Principal" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {owner.role}
-                      </Badge>
-                      <Badge variant={owner.status === "activo" ? "default" : "secondary"} className="text-xs">
-                        {owner.status}
-                      </Badge>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white truncate">
+                      {propietario.persona_info?.nombre || 'Sin nombre'} {propietario.persona_info?.apellido || ''}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Home className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm text-gray-400">
+                        {propietario.vivienda_info?.bloque || 'N/A'}-{propietario.vivienda_info?.numero_casa || 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex space-x-1">
-                  <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Contact Info */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 text-sm">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span className="truncate text-gray-300">{owner.email}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-300">{owner.phone}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <Home className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-300">Unidad {owner.unit}</span>
-                  <span className="text-gray-400">({owner.ownership}% propiedad)</span>
-                </div>
-              </div>
 
-              {/* Parking Spots */}
-              {owner.parkingSpots.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Car className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-300">Estacionamiento:</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {owner.parkingSpots.map((spot) => (
-                      <Badge key={spot} variant="outline" className="text-xs border-gray-600 text-gray-300">
-                        {spot}
-                      </Badge>
-                    ))}
+                <div className="mt-4 space-y-2">
+                  {propietario.persona_info?.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-300 truncate">{propietario.persona_info.email}</span>
+                    </div>
+                  )}
+                  
+                  {propietario.persona_info?.telefono && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-300">{propietario.persona_info.telefono}</span>
+                    </div>
+                  )}
+
+                  {propietario.fecha_inicio && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-300">
+                        Desde: {new Date(propietario.fecha_inicio).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-500/40">
+                    Propietario
+                  </Badge>
+                  <div className="text-sm text-gray-400">
+                    {propietario.vivienda_info?.tipo_vivienda || 'Casa'}
                   </div>
                 </div>
-              )}
-
-              {/* Join Date */}
-              <div className="flex items-center space-x-2 text-sm text-gray-400">
-                <Calendar className="w-4 h-4" />
-                <span>Ingresó: {new Date(owner.joinDate).toLocaleDateString()}</span>
-              </div>
-
-              {/* Emergency Contact */}
-              <div className="pt-2 border-t border-[#2a2a2a]">
-                <div className="text-xs text-gray-400">Contacto de Emergencia:</div>
-                <div className="text-sm font-medium text-gray-300">{owner.emergencyContact}</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredOwners.length === 0 && (
-        <Card className="bg-[#111111] border-[#1f1f1f]">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="w-12 h-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-white">No se encontraron copropietarios</h3>
-            <p className="text-gray-400 text-center">
-              {searchTerm || selectedUnit !== "all"
-                ? "Intenta ajustar tus criterios de búsqueda o filtros"
-                : "Comienza agregando copropietarios al sistema"}
-            </p>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
-  )
+  );
 }

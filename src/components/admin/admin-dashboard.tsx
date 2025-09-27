@@ -18,9 +18,13 @@ import {
   Plus,
   Bell,
   ClipboardList,
+  UserCheck,
+  Home,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { useSolicitudesRegistro } from "@/hooks/useSolicitudesRegistro"
+import { useEstadisticasAdmin } from "@/hooks/useEstadisticasAdmin"
 import {
   Bar,
   BarChart,
@@ -49,12 +53,12 @@ const stats = [
     link: "/admin/unidades",
   },
   {
-    title: "Residentes Activos",
+    title: "Usuarios del Sistema",
     value: "342",
     change: "+5.2%",
     trend: "up",
     icon: Users,
-    description: "2.2 residentes por unidad promedio",
+    description: "Propietarios e inquilinos registrados",
     link: "/admin/usuarios",
   },
   {
@@ -173,6 +177,7 @@ const utilityData = [
 
 export default function AdminDashboard() {
   const { obtenerContadorPendientes, cargarSolicitudes } = useSolicitudesRegistro();
+  const { estadisticas, loading, error, recargar } = useEstadisticasAdmin();
   const solicitudesPendientes = obtenerContadorPendientes();
 
   // Cargar solicitudes al montar el componente  
@@ -180,20 +185,73 @@ export default function AdminDashboard() {
     cargarSolicitudes();
   }, [cargarSolicitudes]);
 
-  // Estadísticas dinámicas con datos reales
+  // Estadísticas dinámicas con datos reales - con validaciones para evitar errores
   const statsConDatos = [
-    stats[0], // Total Unidades
     {
-      title: "Solicitudes Pendientes",
-      value: solicitudesPendientes.toString(),
-      change: solicitudesPendientes > 0 ? `+${solicitudesPendientes}` : "0",
+      title: "Total Unidades",
+      value: estadisticas?.totalUnidades?.toString() || "0",
+      change: estadisticas?.totalUnidades > 0 ? `${estadisticas.unidadesOcupadas} ocupadas` : "0",
       trend: "up",
+      icon: Building2,
+      description: `${estadisticas?.unidadesDisponibles || 0} disponibles, ${estadisticas?.unidadesAlquiladas || 0} alquiladas`,
+      link: "/admin/unidades",
+    },
+    {
+      title: "Usuarios Registrados",
+      value: estadisticas?.totalUsuarios?.toString() || "0",
+      change: `${estadisticas?.totalPropietarios || 0} propietarios`,
+      trend: "up",
+      icon: Users,
+      description: `${estadisticas?.totalInquilinos || 0} inquilinos registrados en el sistema`,
+      link: "/admin/usuarios",
+    },
+    {
+      title: "Solicitudes Pendientes", 
+      value: estadisticas?.solicitudesPendientes?.toString() || "0",
+      change: (estadisticas?.solicitudesPendientes || 0) > 0 ? `+${estadisticas.solicitudesPendientes}` : "0",
+      trend: (estadisticas?.solicitudesPendientes || 0) > 0 ? "up" : "neutral",
       icon: ClipboardList,
       description: "Nuevas solicitudes de registro esperando aprobación",
       link: "/admin/solicitudes",
     },
-    ...stats.slice(1) // Resto de estadísticas
+    {
+      title: "Ingresos Mensuales",
+      value: (estadisticas?.ingresosMensuales || 0) > 0 ? `$${estadisticas.ingresosMensuales.toLocaleString()}` : "Por implementar",
+      change: "-",
+      trend: "neutral",
+      icon: CreditCard,
+      description: "Incluye cuotas de mantenimiento y amenidades",
+      link: "/admin/finanzas",
+    },
   ];
+
+  // Mostrar estado de carga mientras se cargan las estadísticas
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-white">Cargando estadísticas del dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si ocurre alguno
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-white mb-4">Error al cargar el dashboard: {error}</p>
+          <Button onClick={recargar} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 bg-[#0a0a0a] text-white min-h-screen">
@@ -204,10 +262,6 @@ export default function AdminDashboard() {
           <p className="text-gray-400">Vista general completa de la gestión del condominio</p>
         </div>
         <div className="flex space-x-2">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Residente
-          </Button>
           <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent">
             <Calendar className="w-4 h-4 mr-2" />
             Calendario
@@ -281,10 +335,10 @@ export default function AdminDashboard() {
             Finanzas
           </TabsTrigger>
           <TabsTrigger
-            value="residents"
+            value="users"
             className="text-gray-300 data-[state=active]:bg-[#1f1f1f] data-[state=active]:text-white"
           >
-            Residentes
+            Usuarios
           </TabsTrigger>
           <TabsTrigger
             value="co-owners"
@@ -524,14 +578,17 @@ export default function AdminDashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="residents" className="space-y-6">
+        <TabsContent value="users" className="space-y-6">
           <div className="text-center py-12">
             <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2 text-white">Gestión de Residentes</h3>
-            <p className="text-gray-400 mb-4">Herramientas completas de información y gestión de residentes</p>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <h3 className="text-xl font-semibold mb-2 text-white">Gestión de Usuarios</h3>
+            <p className="text-gray-400 mb-4">Administra propietarios, inquilinos y usuarios del sistema</p>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => window.location.href = '/admin/usuarios'}
+            >
               <Plus className="w-4 h-4 mr-2" />
-              Agregar Nuevo Residente
+              Ver Gestión de Usuarios
             </Button>
           </div>
         </TabsContent>
