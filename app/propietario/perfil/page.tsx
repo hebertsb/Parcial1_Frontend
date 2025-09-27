@@ -27,7 +27,32 @@ import {
 import Link from 'next/link';
 
 export default function PerfilPropietario() {
+  // ...existing code...
+  // Utilidad para transformar la URL de Dropbox a formato raw
+  const getRawDropboxUrl = (url: string) => {
+    if (!url) return "/placeholder-user.jpg";
+    let rawUrl = url.replace("www.dropbox.com", "dl.dropboxusercontent.com");
+    // Eliminar el parámetro dl=0 si existe
+    rawUrl = rawUrl.replace(/([&?])dl=0(&)?/, (match, p1, p2) => p2 ? p1 : '');
+    return rawUrl;
+  };
+  // Utilidad para obtener la URL de reconocimiento facial y convertirla en descarga directa si es de Dropbox
+  // Utilidad para obtener la URL de imagen (perfil o reconocimiento) y convertirla en descarga directa si es de Dropbox
+  const getImagenUrl = (user: any) => {
+    let url = user.foto_perfil ||
+      (Array.isArray(user.fotos_reconocimiento_urls)
+        ? (typeof user.fotos_reconocimiento_urls[0] === 'string'
+            ? user.fotos_reconocimiento_urls[0]
+            : user.fotos_reconocimiento_urls[0]?.url)
+        : undefined);
+    if (url && url.includes('dropbox.com')) {
+      url = url.replace('dl=0', 'dl=1');
+    }
+    return url || "/placeholder-user.jpg";
+  };
   const { perfil: user, loading, error, refetch, debugUserData, tienePropiedades, totalPropiedades } = usePerfilPropietario();
+  // Debug: mostrar el valor de la foto de perfil en consola
+  console.log('Valor de user.foto_perfil:', user?.foto_perfil);
 
   if (loading || !user) {
     return (
@@ -303,7 +328,15 @@ export default function PerfilPropietario() {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="/placeholder-user.jpg" alt={user.name || 'Usuario'} />
+                  <AvatarImage
+                    src={getRawDropboxUrl(
+                      user.foto_perfil ||
+                      (Array.isArray(user.fotos_reconocimiento_urls)
+                        ? user.fotos_reconocimiento_urls[0]
+                        : undefined)
+                    )}
+                    alt={user.name || 'Usuario'}
+                  />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                     {user.name ? getUserInitials(user.name) : 'U'}
                   </AvatarFallback>

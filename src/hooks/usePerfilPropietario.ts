@@ -26,6 +26,7 @@ interface PropiedadInfo {
 }
 
 interface UserProfile extends User {
+  foto_perfil?: string | null;
   // Datos personales adicionales
   telefono?: string;
   direccion?: string;
@@ -95,9 +96,9 @@ export function usePerfilPropietario() {
         const responseUsuario = await apiClient.get('/authz/usuarios/me/');
         if (responseUsuario.data) {
           console.log('👤 Datos del usuario obtenidos desde /me/:', responseUsuario.data);
-          
           const userData = responseUsuario.data as any;
-          
+          // Nuevo log para mostrar todos los campos recibidos
+          console.log('👤 Campos recibidos del backend:', userData);
           // Mapear datos del usuario - crear un nuevo objeto con todos los campos necesarios
           const perfilCompleto: UserProfile = {
             ...datosUsuario,
@@ -108,16 +109,15 @@ export function usePerfilPropietario() {
             direccion: userData.direccion || datosUsuario.direccion,
             ciudad: userData.ciudad || datosUsuario.ciudad,
             codigo_postal: userData.codigo_postal || datosUsuario.codigo_postal,
-            
+            // Mapeo extendido para foto_perfil
+            foto_perfil: userData.foto_perfil || userData.foto || userData.imagen || datosUsuario.foto_perfil,
             // NUEVO: Datos de reconocimiento facial
             fotos_reconocimiento_urls: userData.fotos_reconocimiento_urls || [],
             reconocimiento_facial_activo: userData.reconocimiento_facial_activo || false,
             encoding_facial: userData.encoding_facial || null,
             fecha_enrolamiento: userData.fecha_enrolamiento || null,
           };
-          
           datosUsuario = perfilCompleto;
-          
           console.log('✅ Datos del usuario actualizados:', datosUsuario);
           console.log('📸 Reconocimiento facial:', {
             fotos: userData.fotos_reconocimiento_urls?.length || 0,
@@ -144,7 +144,7 @@ export function usePerfilPropietario() {
               direccion: userData.direccion || datosUsuario.direccion,
               ciudad: userData.ciudad || datosUsuario.ciudad,
               codigo_postal: userData.codigo_postal || datosUsuario.codigo_postal,
-              
+              foto_perfil: userData.foto_perfil || datosUsuario.foto_perfil,
               // NUEVO: Datos de reconocimiento facial
               fotos_reconocimiento_urls: userData.fotos_reconocimiento_urls || [],
               reconocimiento_facial_activo: userData.reconocimiento_facial_activo || false,
