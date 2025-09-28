@@ -358,15 +358,16 @@ export function GestionSolicitudesRegistro() {
 
   // Función para ver foto del backend
   const handleVerFotoBackend = (fotoBase64: string, nombreSolicitante: string) => {
-    if (!fotoBase64) return;
-    
     const ventana = window.open();
     if (ventana) {
-      // Verificar si la imagen ya tiene el prefijo data:image
-      const imageSrc = fotoBase64.startsWith('data:') 
-        ? fotoBase64 
-        : `data:image/jpeg;base64,${fotoBase64}`;
-      
+      let imageSrc = '';
+      if (!fotoBase64 || fotoBase64.trim() === '') {
+        imageSrc = '/placeholder-user.jpg';
+      } else {
+        imageSrc = fotoBase64.startsWith('data:') 
+          ? fotoBase64 
+          : `data:image/jpeg;base64,${fotoBase64}`;
+      }
       ventana.document.write(`
         <html>
           <head>

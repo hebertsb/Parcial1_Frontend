@@ -1,0 +1,23 @@
+Dudas y requerimientos para el backend:
+
+1. ¿Puedes agregar el campo `foto_perfil` (URL pública de la imagen de perfil) en la respuesta del endpoint `/authz/usuarios/me/`?
+   - Ejemplo esperado:
+     {
+       "id": 25,
+       "email": "loco@gmail.com",
+       "name": "locochon jilgeros",
+       "role": "propietario",
+       "foto_perfil": "https://www.dropbox.com/s/xxxxxx/imagen.jpg?dl=0"
+     }
+
+2. ¿Qué nombre de campo usas para la foto de perfil en tu modelo/serializer? (¿`foto_perfil`, `foto`, `imagen`?)
+
+3. ¿La URL de la imagen es pública y accesible desde el frontend? (Dropbox, S3, etc.)
+
+4. ¿Hay algún endpoint para actualizar la foto de perfil del usuario?
+
+5. ¿El serializer del usuario incluye todos los datos necesarios para el frontend? Si falta algún campo, ¿puedes agregarlo?
+
+6. ¿Hay algún formato especial para la URL de la imagen que debamos transformar en el frontend?
+
+Si puedes responder o ajustar el backend según estas dudas, el frontend podrá mostrar la imagen correctamente.

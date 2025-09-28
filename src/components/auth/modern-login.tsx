@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -21,8 +20,16 @@ export function ModernLogin() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const { login } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const router = useRouter()
+
+  // Redirigir si ya está autenticado
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      const dashboardRoute = getDashboardRoute(user.role)
+      router.replace(dashboardRoute)
+    }
+  }, [isAuthenticated, user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

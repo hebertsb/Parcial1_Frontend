@@ -67,7 +67,7 @@ export function useEstadisticasAdmin() {
       // Obtener solicitudes pendientes con manejo de errores
       let solicitudesPendientes = 0;
       try {
-        const solicitudesResponse = await apiClient.get('/personas/solicitudes/');
+  const solicitudesResponse = await apiClient.get('/authz/propietarios/admin/solicitudes/');
         const solicitudes = (solicitudesResponse.data as any)?.results || solicitudesResponse.data || [];
         solicitudesPendientes = solicitudes.filter((s: any) => s.estado === 'pendiente').length;
       } catch (err) {
