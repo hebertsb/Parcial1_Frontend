@@ -24,6 +24,7 @@ export interface SolicitudRegistroPropietario {
   tipo_unidad?: string;
   observaciones?: string;
   // NUEVO: Reconocimiento facial
+  // Array de 5 fotos: [0] = perfil principal, [1-4] = reconocimiento facial para acceso
   fotos_base64?: string[];
   acepta_terminos?: boolean;
   password?: string;
@@ -213,12 +214,41 @@ export const propietariosService = {
         }
       );
       
+      // Debug: Mostrar toda la respuesta del backend
+      console.log('🔍 Propietarios: Respuesta completa del backend:', response);
+      console.log('🔍 Propietarios: Success flag:', response.success);
+      console.log('🔍 Propietarios: Message:', response.message);
+      
+      // Análisis detallado de la estructura de respuesta
+      console.log('🔍 Propietarios: response.data existe?', !!response.data);
+      console.log('🔍 Propietarios: Tipo de response.data:', typeof response.data);
+      console.log('🔍 Propietarios: Keys en response.data:', Object.keys(response.data || {}));
+      
+      // Verificar si la respuesta tiene la estructura esperada
+      if (response.data?.data) {
+        console.log('🔍 Propietarios: Keys en response.data.data:', Object.keys(response.data.data));
+        console.log('🔍 Propietarios: email_enviado value:', response.data.data.email_enviado);
+        console.log('🔍 Propietarios: email_enviado type:', typeof response.data.data.email_enviado);
+        console.log('🔍 Propietarios: email_propietario:', response.data.data.email_propietario);
+        console.log('🔍 Propietarios: password_temporal:', response.data.data.password_temporal);
+        console.log('🔍 Propietarios: usuario_creado:', response.data.data.usuario_creado);
+      } else {
+        console.warn('⚠️ Propietarios: La respuesta no tiene la estructura esperada para email');
+        console.warn('⚠️ Propietarios: Keys en response.data:', Object.keys(response.data || {}));
+        console.warn('⚠️ Propietarios: Verificando si email_enviado está en otro lugar...');
+        console.warn('⚠️ Propietarios: response.data completo:', JSON.stringify(response.data, null, 2));
+      }
+      
       if (response.data?.data?.email_enviado) {
         console.log('✅ Propietarios: Solicitud aprobada y email enviado exitosamente');
         console.log('📧 Email enviado a:', response.data.data.email_propietario);
         console.log('🔑 Contraseña temporal:', response.data.data.password_temporal);
       } else {
         console.warn('⚠️ Propietarios: Solicitud aprobada pero el email puede no haberse enviado');
+        console.warn('⚠️ Campo email_enviado:', response.data?.data?.email_enviado);
+        console.warn('⚠️ Respuesta data completa:', response.data?.data);
+        console.warn('⚠️ PROBLEMA: El backend no está devolviendo el campo email_enviado correctamente');
+        console.warn('⚠️ Esto indica que el backend no está configurado para enviar emails');
       }
       
       return response;
@@ -263,6 +293,59 @@ export const propietariosService = {
       return response;
     } catch (error: any) {
       console.error('❌ Propietarios: Error cargando propietarios:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Test para verificar configuración de email del backend
+   */
+  async testEmailConfiguration(): Promise<ApiResponse<{ 
+    email_configured: boolean; 
+    smtp_settings: any; 
+    test_email_sent?: boolean;
+    error?: string;
+  }>> {
+    try {
+      console.log('🧪 Propietarios: Probando configuración de email del backend...');
+      
+      const response = await apiClient.get<{ 
+        email_configured: boolean; 
+        smtp_settings: any; 
+        test_email_sent?: boolean;
+        error?: string;
+      }>('/authz/test-email-config/');
+      
+      console.log('🧪 Propietarios: Resultado test email:', response.data);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Propietarios: Error probando email config:', error);
+      console.error('❌ Esto puede indicar que el endpoint de prueba no existe en el backend');
+      throw error;
+    }
+  },
+
+  /**
+   * Enviar email de prueba
+   */
+  async sendTestEmail(email: string): Promise<ApiResponse<{ 
+    success: boolean; 
+    message: string;
+    email_sent: boolean;
+  }>> {
+    try {
+      console.log('📧 Propietarios: Enviando email de prueba a:', email);
+      
+      const response = await apiClient.post<{ 
+        success: boolean; 
+        message: string;
+        email_sent: boolean;
+      }>('/authz/send-test-email/', { email_destino: email });
+      
+      console.log('📧 Propietarios: Resultado email de prueba:', response.data);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Propietarios: Error enviando email de prueba:', error);
       throw error;
     }
   }

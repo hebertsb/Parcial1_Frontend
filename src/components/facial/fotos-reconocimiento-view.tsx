@@ -85,38 +85,54 @@ export function FotosReconocimientoView({
             )}
           </CardTitle>
           <CardDescription>
-            Fotos proporcionadas para el sistema de reconocimiento facial
+            {fotosUrls.length >= 5 
+              ? 'Foto de perfil (👤) y fotos para control de acceso facial (🔒)'
+              : 'Fotos proporcionadas para el sistema de reconocimiento facial'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {fotosUrls.map((fotoUrl, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={fotoUrl}
-                  alt={`Foto ${index + 1} de ${nombreSolicitante}`}
-                  className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-75 transition-opacity"
-                  onClick={() => verFoto(fotoUrl)}
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg" />
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-6 w-6 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      descargarFoto(fotoUrl, index);
-                    }}
+            {fotosUrls.map((fotoUrl, index) => {
+              const esFotoPerfil = index === 0;
+              const numeroReconocimiento = index;
+              
+              return (
+                <div key={index} className="relative group">
+                  <img
+                    src={fotoUrl}
+                    alt={esFotoPerfil ? `Foto de perfil de ${nombreSolicitante}` : `Foto reconocimiento ${numeroReconocimiento} de ${nombreSolicitante}`}
+                    className={`w-full h-32 object-cover rounded-lg border-2 cursor-pointer hover:opacity-75 transition-opacity ${
+                      esFotoPerfil ? 'border-blue-400' : 'border-green-400'
+                    }`}
+                    onClick={() => verFoto(fotoUrl)}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg" />
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        descargarFoto(fotoUrl, index);
+                      }}
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <Badge 
+                    className={`absolute bottom-2 left-2 text-xs ${
+                      esFotoPerfil 
+                        ? 'bg-blue-500 hover:bg-blue-600' 
+                        : 'bg-green-500 hover:bg-green-600'
+                    }`}
                   >
-                    <Download className="h-3 w-3" />
-                  </Button>
+                    {esFotoPerfil ? '👤 Perfil' : `🔒 RF-${numeroReconocimiento}`}
+                  </Badge>
                 </div>
-                <Badge className="absolute bottom-2 left-2 text-xs">
-                  Foto {index + 1}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-4 flex gap-2">

@@ -17,13 +17,15 @@ interface FotoReconocimientoProps {
   fotos: string[];
   maxFotos?: number;
   requeridas?: boolean;
+  descripcion?: string;
 }
 
 export function FotoReconocimientoCapture({ 
   onFotosChange, 
   fotos, 
   maxFotos = 3, 
-  requeridas = true 
+  requeridas = true,
+  descripcion 
 }: FotoReconocimientoProps) {
   const [camaraActiva, setCamaraActiva] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -150,8 +152,7 @@ export function FotoReconocimientoCapture({
           {requeridas && <Badge variant="destructive" className="text-xs">Requerido</Badge>}
         </CardTitle>
         <CardDescription>
-          Necesitamos {maxFotos} foto{maxFotos > 1 ? 's' : ''} tuya para configurar el reconocimiento facial. 
-          Asegúrate de que tu rostro esté bien iluminado y centrado.
+          {descripcion || `Necesitamos ${maxFotos} foto${maxFotos > 1 ? 's' : ''} tuya para configurar el reconocimiento facial. Asegúrate de que tu rostro esté bien iluminado y centrado.`}
         </CardDescription>
       </CardHeader>
 
@@ -237,40 +238,72 @@ export function FotoReconocimientoCapture({
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Fotos capturadas:</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {fotos.map((foto, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={foto}
-                    alt={`Foto ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-lg border"
-                  />
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => eliminarFoto(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                  <Badge className="absolute bottom-1 left-1 text-xs">
-                    Foto {index + 1}
-                  </Badge>
-                </div>
-              ))}
+              {fotos.map((foto, index) => {
+                const esFotoPerfil = index === 0;
+                const numeroReconocimiento = index;
+                
+                return (
+                  <div key={index} className="relative group">
+                    <img
+                      src={foto}
+                      alt={esFotoPerfil ? 'Foto de perfil' : `Reconocimiento facial ${numeroReconocimiento}`}
+                      className={`w-full h-32 object-cover rounded-lg border-2 ${
+                        esFotoPerfil ? 'border-blue-400' : 'border-green-400'
+                      }`}
+                    />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => eliminarFoto(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    <Badge 
+                      className={`absolute bottom-1 left-1 text-xs ${
+                        esFotoPerfil 
+                          ? 'bg-blue-500 hover:bg-blue-600' 
+                          : 'bg-green-500 hover:bg-green-600'
+                      }`}
+                    >
+                      {esFotoPerfil ? '👤 Perfil' : `🔒 RF-${numeroReconocimiento}`}
+                    </Badge>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Información adicional */}
-        <div className="bg-blue-50 p-3 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 mb-1">Consejos para mejores fotos:</h4>
-          <ul className="text-xs text-blue-800 space-y-1">
-            <li>• Mantén tu rostro centrado y bien iluminado</li>
-            <li>• Evita sombras y reflejos</li>
-            <li>• Mira directamente a la cámara</li>
-            <li>• No uses gafas de sol ni gorros</li>
-            {maxFotos > 1 && <li>• Toma fotos desde diferentes ángulos ligeramente</li>}
-          </ul>
+        <div className="space-y-3">
+          {maxFotos >= 5 && (
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 p-3 rounded-lg border">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">📸 Tipos de fotos requeridas:</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">👤 Foto 1</Badge>
+                  <span className="text-blue-800">Foto de perfil principal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">🔒 Fotos 2-5</Badge>
+                  <span className="text-green-800">Control de acceso facial</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <h4 className="text-sm font-medium text-amber-900 mb-1">💡 Consejos para mejores fotos:</h4>
+            <ul className="text-xs text-amber-800 space-y-1">
+              <li>• Mantén tu rostro centrado y bien iluminado</li>
+              <li>• Evita sombras y reflejos</li>
+              <li>• Mira directamente a la cámara</li>
+              <li>• No uses gafas de sol ni gorros</li>
+              {maxFotos > 1 && <li>• Toma fotos desde diferentes ángulos ligeramente (5°-10°)</li>}
+              {maxFotos >= 5 && <li>• La 1ª foto será tu perfil, las otras 4 para acceso al condominio</li>}
+            </ul>
+          </div>
         </div>
       </CardContent>
     </Card>

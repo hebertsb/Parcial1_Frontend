@@ -52,7 +52,9 @@ export function SolicitudesAdminPanel() {
     error, 
     aprobarSolicitud, 
     rechazarSolicitud,
-    cargarSolicitudesPendientes 
+    cargarSolicitudesPendientes,
+    testEmailConfiguration,
+    sendTestEmail 
   } = usePropietarios();
 
   const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudPendiente | null>(null);
@@ -61,6 +63,14 @@ export function SolicitudesAdminPanel() {
   const [actionType, setActionType] = useState<'aprobar' | 'rechazar' | null>(null);
   const [observaciones, setObservaciones] = useState('');
   const [motivoRechazo, setMotivoRechazo] = useState('');
+  
+  // Estados para diagnóstico de email
+  const [emailDiagnostico, setEmailDiagnostico] = useState<{
+    configurado?: boolean;
+    probando: boolean;
+    resultados?: string;
+  }>({ probando: false });
+  const [emailPrueba, setEmailPrueba] = useState('');
 
   const solicitudesPendientes = solicitudes.filter(s => s.estado === 'PENDIENTE');
 
@@ -219,6 +229,100 @@ export function SolicitudesAdminPanel() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Panel de Diagnóstico de Email */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center text-blue-700">
+            <Mail className="w-5 h-5 mr-2" />
+            🧪 Diagnóstico de Sistema de Email
+          </CardTitle>
+          <CardDescription>
+            Verifica si el backend está configurado correctamente para enviar emails automáticos
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setEmailDiagnostico({ probando: true });
+                try {
+                  const resultado = await testEmailConfiguration();
+                  setEmailDiagnostico({
+                    probando: false,
+                    configurado: resultado.emailConfigured,
+                    resultados: resultado.success 
+                      ? `✅ Email configurado: ${resultado.emailConfigured ? 'SÍ' : 'NO'}`
+                      : `❌ ${resultado.error}`
+                  });
+                } catch (error) {
+                  setEmailDiagnostico({
+                    probando: false,
+                    resultados: `❌ Error: ${error}`
+                  });
+                }
+              }}
+              disabled={emailDiagnostico.probando}
+            >
+              {emailDiagnostico.probando ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : null}
+              Verificar Configuración
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="tucorreo@example.com"
+                value={emailPrueba}
+                onChange={(e) => setEmailPrueba(e.target.value)}
+                className="w-48"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!emailPrueba.trim()) return;
+                  setEmailDiagnostico({ probando: true });
+                  try {
+                    const resultado = await sendTestEmail(emailPrueba);
+                    setEmailDiagnostico({
+                      probando: false,
+                      resultados: resultado.success 
+                        ? `✅ Email de prueba: ${resultado.emailSent ? 'ENVIADO' : 'NO ENVIADO'} - ${resultado.message}`
+                        : `❌ ${resultado.message}`
+                    });
+                  } catch (error) {
+                    setEmailDiagnostico({
+                      probando: false,
+                      resultados: `❌ Error: ${error}`
+                    });
+                  }
+                }}
+                disabled={emailDiagnostico.probando || !emailPrueba.trim()}
+              >
+                {emailDiagnostico.probando ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                Enviar Prueba
+              </Button>
+            </div>
+          </div>
+
+          {emailDiagnostico.resultados && (
+            <Alert className={emailDiagnostico.resultados.includes('✅') ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+              <AlertDescription className="font-mono text-sm">
+                {emailDiagnostico.resultados}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="text-xs text-muted-foreground">
+            💡 <strong>Tip:</strong> Si el backend no está configurado para emails, las solicitudes se aprobarán pero no se enviarán credenciales automáticamente.
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabla de solicitudes */}
       <Card>

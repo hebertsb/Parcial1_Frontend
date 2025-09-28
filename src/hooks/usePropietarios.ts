@@ -34,6 +34,19 @@ interface UsePropietariosReturn {
   // Acciones de propietarios
   cargarPropietarios: () => Promise<void>;
   
+  // Pruebas de email
+  testEmailConfiguration: () => Promise<{
+    success: boolean;
+    emailConfigured?: boolean;
+    smtpSettings?: any;
+    error?: string;
+  }>;
+  sendTestEmail: (email: string) => Promise<{
+    success: boolean;
+    emailSent?: boolean;
+    message: string;
+  }>;
+  
   // Utilidades
   refetch: () => Promise<void>;
 }
@@ -210,6 +223,76 @@ El propietario recibirá un email con sus credenciales de acceso.`);
   }, []);
 
   // ============================================================================
+  // PRUEBAS DE EMAIL
+  // ============================================================================
+
+  const testEmailConfiguration = useCallback(async (): Promise<{
+    success: boolean;
+    emailConfigured?: boolean;
+    smtpSettings?: any;
+    error?: string;
+  }> => {
+    try {
+      setLoading(true);
+      console.log('🧪 usePropietarios: Probando configuración de email...');
+      
+      const response = await propietariosService.testEmailConfiguration();
+      
+      if (response.success && response.data) {
+        console.log('✅ usePropietarios: Test de email completado:', response.data);
+        return {
+          success: true,
+          emailConfigured: response.data.email_configured,
+          smtpSettings: response.data.smtp_settings,
+        };
+      } else {
+        throw new Error(response.message || 'Error en test de email');
+      }
+    } catch (err: any) {
+      console.error('❌ usePropietarios: Error en test de email:', err);
+      return {
+        success: false,
+        error: err.message || 'Error probando configuración de email'
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const sendTestEmail = useCallback(async (email: string): Promise<{
+    success: boolean;
+    emailSent?: boolean;
+    message: string;
+  }> => {
+    try {
+      setLoading(true);
+      console.log('📧 usePropietarios: Enviando email de prueba a:', email);
+      
+      const response = await propietariosService.sendTestEmail(email);
+      
+      if (response.success && response.data) {
+        console.log('✅ usePropietarios: Email de prueba enviado:', response.data);
+        return {
+          success: true,
+          emailSent: response.data.email_sent,
+          message: response.data.message
+        };
+      } else {
+        throw new Error(response.message || 'Error enviando email de prueba');
+      }
+    } catch (err: any) {
+      console.error('❌ usePropietarios: Error enviando email de prueba:', err);
+      return {
+        success: false,
+        emailSent: false,
+        message: err.message || 'Error enviando email de prueba'
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ============================================================================
   // UTILIDADES
   // ============================================================================
 
@@ -246,6 +329,10 @@ El propietario recibirá un email con sus credenciales de acceso.`);
     
     // Acciones de propietarios
     cargarPropietarios,
+    
+    // Pruebas de email
+    testEmailConfiguration,
+    sendTestEmail,
     
     // Utilidades
     refetch

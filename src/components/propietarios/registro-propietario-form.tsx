@@ -80,8 +80,12 @@ export function RegistroPropietarioForm() {
       return;
     }
 
-    if ((formData.fotos_base64?.length || 0) < 1) {
-      alert('Debes tomar al menos una foto para el reconocimiento facial');
+    if ((formData.fotos_base64?.length || 0) < 5) {
+      alert(`Debes tomar exactamente 5 fotos para el sistema de acceso:
+• 1 foto de perfil principal
+• 4 fotos adicionales para reconocimiento facial
+
+Actualmente tienes: ${formData.fotos_base64?.length || 0} foto(s)`);
       return;
     }
 
@@ -306,8 +310,9 @@ export function RegistroPropietarioForm() {
             <FotoReconocimientoCapture 
               onFotosChange={handleFotosChange}
               fotos={formData.fotos_base64 || []}
-              maxFotos={3}
+              maxFotos={5}
               requeridas={true}
+              descripcion="Toma 5 fotos: 1 para perfil principal + 4 para reconocimiento facial de acceso al condominio"
             />
           </div>
 
@@ -406,11 +411,13 @@ export function RegistroPropietarioForm() {
           )}
 
           {/* Información adicional */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Información Importante:</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
+          <div className="bg-gradient-to-br from-blue-50 to-green-50 p-4 rounded-lg border">
+            <h4 className="font-medium text-gray-900 mb-2">📋 Información Importante:</h4>
+            <ul className="text-sm text-gray-800 space-y-1">
               <li>• Su solicitud será revisada por el administrador</li>
-              <li>• Las fotos de reconocimiento facial son obligatorias</li>
+              <li>• <strong>Se requieren exactamente 5 fotos:</strong></li>
+              <li className="ml-4">→ 1 foto para su perfil principal (👤)</li>
+              <li className="ml-4">→ 4 fotos para control de acceso facial al condominio (🔒)</li>
               <li>• Sus imágenes se almacenarán de forma segura y encriptada</li>
               <li>• Recibirá una notificación por email sobre el estado de su solicitud</li>
               <li>• Una vez aprobada, podrá acceder con reconocimiento facial</li>
