@@ -1,5 +1,5 @@
-import { SecurityMonitor } from "@/components/seguridad/security-monitor"
+import { PanelSeguridadReconocimiento } from "@/components/security"
 
 export default function SecurityMonitorPage() {
-  return <SecurityMonitor />
+  return <PanelSeguridadReconocimiento />
 }

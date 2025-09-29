@@ -348,6 +348,251 @@ export const propietariosService = {
       console.error('❌ Propietarios: Error enviando email de prueba:', error);
       throw error;
     }
+  },
+
+  /**
+   * Subir fotos adicionales para reconocimiento facial
+   * CORREGIDO según recomendaciones del backend
+   */
+  async subirFotosReconocimiento(usuarioId: string | number, fotos: File[]): Promise<ApiResponse<{ 
+    fotos_urls: string[];
+    total_fotos: number;
+    mensaje: string;
+  }>> {
+    try {
+      console.log('📸 Propietarios: Subiendo fotos de reconocimiento para usuario:', usuarioId);
+      console.log('📸 Propietarios: Número de fotos:', fotos.length);
+      
+      // 1. CORRECTO: Usar FormData según documentación del backend
+      if (fotos.length === 0) {
+        throw new Error('No se seleccionaron fotos para subir');
+      }
+      
+      console.log('📸 Fotos seleccionadas:', fotos.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)}MB)`));
+      console.log('📸 Usando endpoint: /api/authz/propietarios/subir-foto/ (BACKEND CONFIRMADO)');
+
+      // 3. Obtener token de autenticación
+      const token = localStorage.getItem('access_token') || 
+                   localStorage.getItem('authToken') || 
+                   sessionStorage.getItem('access_token') ||
+                   sessionStorage.getItem('authToken');
+      
+      console.log('🔐 Token encontrado:', token ? 'Sí' : 'No');
+      
+      if (!token) {
+        throw new Error('No se encontró token de autenticación. Por favor, inicia sesión nuevamente.');
+      }
+      
+      console.log('🔄 Propietarios: Preparando FormData para backend...');
+      
+      // 4. USAR ENDPOINT REAL DEL BACKEND: FormData según documentación
+      const formData = new FormData();
+      const primeraFoto = fotos[0]; // Subir una foto por vez según backend
+      formData.append('foto', primeraFoto);
+      
+      const fetchResponse = await fetch('http://localhost:8000/api/authz/propietarios/subir-foto/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // NO Content-Type - FormData lo maneja automáticamente
+        },
+        body: formData
+      });
+
+      // 5. Verificar respuesta
+      if (!fetchResponse.ok) {
+        const errorData = await fetchResponse.json().catch(() => ({}));
+        
+        console.error('❌ Error en petición:');
+        console.error('   • Status:', fetchResponse.status);
+        console.error('   • StatusText:', fetchResponse.statusText);
+        console.error('   • URL:', fetchResponse.url);
+        console.error('   • Error data:', errorData);
+        
+        // Manejo específico de errores
+        if (fetchResponse.status === 401) {
+          // Limpiar tokens expirados
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('access_token');
+          sessionStorage.removeItem('authToken');
+          
+          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        }
+        
+        if (fetchResponse.status === 405) {
+          throw new Error('Método no permitido. Verificar configuración del endpoint.');
+        }
+        
+        throw new Error(errorData.detail || errorData.message || `Error ${fetchResponse.status}: ${fetchResponse.statusText}`);
+      }
+
+      // 6. Procesar respuesta según documentación del backend
+      const data = await fetchResponse.json();
+      console.log('📡 Respuesta del POST subir foto:', data);
+      console.log('📡 SUBIDA: Estructura completa:', JSON.stringify(data, null, 2));
+      
+      // Según documentación: { success: true, data: { foto_url, total_fotos, reconocimiento_id } }
+      if (data.success && data.data && data.data.foto_url) {
+        console.log('🎉 SUBIDA: ¡URL de Dropbox recibida!:', data.data.foto_url);
+        console.log('🎉 SUBIDA: Es Dropbox?:', data.data.foto_url.includes('dropbox') ? 'SÍ ✅' : 'NO ❌');
+        console.log('🎉 SUBIDA: Total fotos ahora:', data.data.total_fotos);
+        console.log('🎉 SUBIDA: Reconocimiento ID:', data.data.reconocimiento_id);
+      } else {
+        console.log('❌ SUBIDA: NO se recibió foto_url del backend');
+        console.log('❌ SUBIDA: data:', data);
+      }
+      
+      // Respuesta adaptada al formato esperado por el frontend
+      const response = {
+        success: true,
+        data: {
+          fotos_urls: data.data?.foto_url ? [data.data.foto_url] : [],
+          total_fotos: data.data?.total_fotos || 1,
+          mensaje: data.message || 'Foto subida correctamente'
+        },
+        message: data.message || 'Foto de reconocimiento subida exitosamente'
+      };
+      
+      console.log('✅ Propietarios: Foto subida exitosamente:', response.data);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Propietarios: Error subiendo fotos:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 🎉 Obtener MIS fotos de reconocimiento facial - ENDPOINT CORRECTO SEGÚN BACKEND
+   * ✅ Usa el endpoint del backend: GET /api/authz/propietarios/mis-fotos/
+   */
+  async obtenerFotosReconocimiento(usuarioId: string | number): Promise<ApiResponse<{
+    fotos_urls: string[];
+    total_fotos: number;
+    fecha_ultima_actualizacion?: string;
+    tiene_reconocimiento?: boolean;
+    usuario_email?: string;
+    propietario_nombre?: string;
+  }>> {
+    try {
+      console.log('🎉 Propietarios: Obteniendo MIS fotos desde ENDPOINT BACKEND CORRECTO');
+      
+      const fetchResponse = await fetch(`http://localhost:8000/api/authz/propietarios/mis-fotos/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token') || sessionStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!fetchResponse.ok) {
+        if (fetchResponse.status === 404) {
+          console.log('📸 Usuario no tiene fotos de reconocimiento registradas');
+          return {
+            success: true,
+            data: {
+              fotos_urls: [],
+              total_fotos: 0,
+              tiene_reconocimiento: false
+            },
+            message: 'Usuario no tiene fotos de reconocimiento'
+          };
+        }
+        
+        if (fetchResponse.status === 403) {
+          throw new Error('No tienes permisos para ver estas fotos');
+        }
+        
+        const errorData = await fetchResponse.json().catch(() => ({ error: 'Error desconocido' }));
+        throw new Error(`Error ${fetchResponse.status}: ${errorData.error || fetchResponse.statusText}`);
+      }
+
+      const data = await fetchResponse.json();
+      console.log('✅ GET MIS FOTOS: Respuesta del endpoint:', data);
+      console.log('🔍 GET MIS FOTOS: Estructura completa de la respuesta:', JSON.stringify(data, null, 2));
+      
+      // DEBUG ESPECÍFICO PARA URLS - Según documentación del backend
+      if (data.success && data.data) {
+        console.log('🎉 GET MIS FOTOS: Respuesta exitosa del backend');
+        
+        // El backend puede devolver diferentes estructuras, verificamos todas
+        const fotosUrls = data.data.fotos_urls || data.data.fotos || [];
+        
+        if (fotosUrls && fotosUrls.length > 0) {
+          console.log('📸 GET MIS FOTOS: ¡URLs de Dropbox encontradas!');
+          console.log('📸 GET MIS FOTOS: Cantidad de URLs:', fotosUrls.length);
+          fotosUrls.forEach((url: string, index: number) => {
+            console.log(`📸 GET MIS FOTOS: URL ${index + 1}: ${url}`);
+            console.log(`📸 GET MIS FOTOS: Es Dropbox? ${url.includes('dropbox') ? 'SÍ ✅' : 'NO ❌'}`);
+          });
+        } else {
+          console.log('📸 GET MIS FOTOS: Usuario no tiene fotos aún');
+        }
+      } else {
+        console.log('❌ GET MIS FOTOS: Respuesta no exitosa o sin data');
+        console.log('❌ GET MIS FOTOS: data.success:', data.success);
+        console.log('❌ GET MIS FOTOS: data.data existe?', !!data.data);
+        console.log('❌ GET MIS FOTOS: data.data keys:', data.data ? Object.keys(data.data) : 'N/A');
+      }
+
+      if (data.success && data.data) {
+        // Procesar fotos_urls según documentación del backend
+        const fotosUrls = data.data.fotos_urls || data.data.fotos || [];
+        
+        const response: ApiResponse<{
+          fotos_urls: string[];
+          total_fotos: number;
+          fecha_ultima_actualizacion?: string;
+          tiene_reconocimiento?: boolean;
+          usuario_email?: string;
+          propietario_nombre?: string;
+        }> = {
+          success: true,
+          data: {
+            fotos_urls: fotosUrls,
+            total_fotos: fotosUrls.length || data.data.total_fotos || 0,
+            fecha_ultima_actualizacion: data.data.fecha_ultima_actualizacion,
+            tiene_reconocimiento: fotosUrls.length > 0,
+            usuario_email: data.data.usuario_email,
+            propietario_nombre: data.data.propietario_nombre
+          },
+          message: data.message || data.mensaje || 'Fotos obtenidas correctamente'
+        };
+        
+        console.log(`✅ Usuario ${usuarioId} tiene ${response.data.total_fotos} fotos de reconocimiento`);
+        return response;
+      } else {
+        console.log('📸 Respuesta no exitosa del endpoint:', data);
+        return {
+          success: true,
+          data: {
+            fotos_urls: [],
+            total_fotos: 0,
+            tiene_reconocimiento: false
+          },
+          message: 'No se encontraron fotos de reconocimiento'
+        };
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Propietarios: Error obteniendo fotos:', error);
+      
+      // Para errores de permisos, lanzar el error
+      if (error.message.includes('permisos')) {
+        throw error;
+      }
+      
+      // Para otros errores, retornar datos vacíos
+      return {
+        success: true,
+        data: {
+          fotos_urls: [],
+          total_fotos: 0,
+          tiene_reconocimiento: false
+        },
+        message: 'Error al obtener fotos de reconocimiento'
+      };
+    }
   }
 };
 

@@ -49,7 +49,7 @@ export const components = {
   finanzas: () => import('./components/finanzas'),
   unidades: () => import('./components/unidades'),
   usuarios: () => import('./components/usuarios'),
-  seguridad: () => import('./components/seguridad'),
+  security: () => import('./components/security'),
   ui: () => import('./components/ui'),
 };
 

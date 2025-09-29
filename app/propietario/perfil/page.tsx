@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ReconocimientoFacialPerfil } from '@/components/facial/reconocimiento-facial-perfil';
+import { ReconocimientoFacialPerfil } from '@/components/facial/reconocimiento-facial-perfil-actualizado';
 import { 
   User, 
   Mail, 
@@ -312,12 +312,12 @@ export default function PerfilPropietario() {
             </CardContent>
           </Card>
 
-          {/* Reconocimiento Facial */}
+          {/* Reconocimiento Facial - ACTUALIZADO */}
           <ReconocimientoFacialPerfil
-            fotosUrls={user.fotos_reconocimiento_urls}
-            activo={user.reconocimiento_facial_activo}
-            fechaEnrolamiento={user.fecha_enrolamiento}
-            nombreUsuario={user.name || 'Usuario'}
+            onFotosActualizadas={(nuevasFotos) => {
+              // Refrescar datos del perfil después de subir fotos
+              refetch();
+            }}
           />
         </div>
 

@@ -34,8 +34,8 @@ export function getDashboardRoute(role: UserRole): string {
       return '/empleado/dashboard'; // Panel de empleado
     
     case 'security':
-      console.log(`✅ getDashboardRoute: Redirigiendo seguridad a /security/monitor`);
-      return '/security/monitor'; // Panel de seguridad
+      console.log(`✅ getDashboardRoute: Redirigiendo seguridad a /security/dashboard`);
+      return '/security/dashboard'; // Panel de seguridad
     
     default:
       console.warn(`⚠️ getDashboardRoute: Rol desconocido: "${role}" (normalizado: "${roleStr}"), redirigiendo a dashboard genérico`);

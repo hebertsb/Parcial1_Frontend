@@ -29,7 +29,7 @@ export * from './admin';
 export * from './finanzas';
 export * from './unidades';
 export * from './usuarios';
-export * from './seguridad';
+export * from './security';
 
 // =====================
 // UI COMPONENTS
@@ -60,7 +60,7 @@ export const featureComponents = {
   finanzas: () => import('./finanzas'),
   unidades: () => import('./unidades'),
   usuarios: () => import('./usuarios'),
-  seguridad: () => import('./seguridad'),
+  security: () => import('./security'),
 };
 
 // UI

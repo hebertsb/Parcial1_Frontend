@@ -75,10 +75,10 @@ export function ModernLogin() {
   }
 
   const demoAccounts = [
-    { role: "Administrator", email: "admin@condomanager.com", icon: Shield, color: "text-red-500" },
-    { role: "Security", email: "security@condomanager.com", icon: Key, color: "text-blue-500" },
-    { role: "Owner", email: "owner@condomanager.com", icon: Home, color: "text-green-500" },
-    { role: "Tenant", email: "tenant@condomanager.com", icon: Users, color: "text-purple-500" },
+    { role: "Administrator", email: "admin@condomanager.com", password: "password123", icon: Shield, color: "text-red-500" },
+    { role: "Security", email: "seguridad@facial.com", password: "seguridad123", icon: Key, color: "text-blue-500" },
+    { role: "Owner", email: "owner@condomanager.com", password: "password123", icon: Home, color: "text-green-500" },
+    { role: "Tenant", email: "tenant@condomanager.com", password: "password123", icon: Users, color: "text-purple-500" },
   ]
 
   return (
@@ -225,7 +225,7 @@ export function ModernLogin() {
                     className="h-auto p-3 flex flex-col items-center space-y-2 hover:bg-background/50 transition-colors"
                     onClick={() => {
                       setEmail(account.email)
-                      setPassword("password123")
+                      setPassword(account.password)
                     }}
                   >
                     <account.icon className={`w-5 h-5 ${account.color}`} />
@@ -239,7 +239,7 @@ export function ModernLogin() {
                 ))}
               </div>
               <p className="text-xs text-center text-muted-foreground mt-4">
-                Password: <span className="font-mono">password123</span>
+                Click on any role to autofill credentials
               </p>
             </CardContent>
           </Card>

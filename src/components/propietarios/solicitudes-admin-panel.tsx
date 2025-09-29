@@ -161,17 +161,43 @@ export function SolicitudesAdminPanel() {
           </p>
         </div>
         
-        <Button 
-          variant="outline" 
-          onClick={cargarSolicitudesPendientes}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            'Actualizar'
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              console.log('🧪 DEBUG ADMIN: Verificando flujo de aprobación...')
+              console.log('📋 Solicitudes actuales:', solicitudes)
+              
+              const aprobadas = solicitudes.filter(s => s.estado === 'APROBADA')
+              console.log('✅ Solicitudes aprobadas:', aprobadas.length)
+              
+              aprobadas.forEach((sol, i) => {
+                console.log(`📋 Aprobada ${i+1}: ${sol.nombres} ${sol.apellidos}`)
+                console.log(`   📧 Email: ${sol.email}`)
+                console.log(`   🏠 Unidad: ${sol.numero_unidad}`)
+                console.log(`   📸 Fotos: ${sol.fotos_reconocimiento_urls?.length || 0}`)
+                console.log(`   🔐 RF: ${sol.tiene_reconocimiento_facial ? '✅' : '❌'}`)
+                console.log(`   📋 Objeto completo:`, sol)
+              })
+              
+              console.log('💡 Próximo paso: Verificar si estos usuarios aparecen en /security/monitor')
+            }}
+          >
+            🔍 Debug
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={cargarSolicitudesPendientes}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              'Actualizar'
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Información importante sobre emails */}

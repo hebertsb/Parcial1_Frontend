@@ -25,3 +25,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# documentación de desarrollo - no subir al repositorio
+/docs_reconocimiento_facial/
