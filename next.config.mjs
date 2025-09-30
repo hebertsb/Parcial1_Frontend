@@ -9,6 +9,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Configuración para Netlify - Exportación estática
+  output: 'export',
+  trailingSlash: true,
+  distDir: 'out',
   // Optimizaciones para desarrollo
   swcMinify: true,
   experimental: {
