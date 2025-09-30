@@ -5,7 +5,7 @@
 
 export const SEGURIDAD_API_ENDPOINTS = {
   // Autenticación
-  LOGIN: '/auth/login/',
+  LOGIN: '/authz/login/',
   REFRESH: '/auth/refresh/',
 
   // Gestión de usuarios de seguridad (Solo Administradores)

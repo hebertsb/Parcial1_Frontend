@@ -352,26 +352,28 @@ export const propietariosService = {
 
   /**
    * Subir fotos adicionales para reconocimiento facial
-   * CORREGIDO según recomendaciones del backend
+   * 🚀 ACTUALIZADO: Formato optimizado JSON + base64 (RECOMENDADO POR BACKEND)
    */
   async subirFotosReconocimiento(usuarioId: string | number, fotos: File[]): Promise<ApiResponse<{ 
-    fotos_urls: string[];
-    total_fotos: number;
+    fotos_subidas: number;
+    total_fotos_sistema: number;
+    reconocimiento_id: number;
+    reconocimiento_activo: boolean;
+    urls_fotos_nuevas: string[];
     mensaje: string;
   }>> {
     try {
       console.log('📸 Propietarios: Subiendo fotos de reconocimiento para usuario:', usuarioId);
       console.log('📸 Propietarios: Número de fotos:', fotos.length);
       
-      // 1. CORRECTO: Usar FormData según documentación del backend
       if (fotos.length === 0) {
         throw new Error('No se seleccionaron fotos para subir');
       }
       
       console.log('📸 Fotos seleccionadas:', fotos.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)}MB)`));
-      console.log('📸 Usando endpoint: /api/authz/propietarios/subir-foto/ (BACKEND CONFIRMADO)');
+      console.log('� Usando endpoint MEJORADO: /api/authz/propietarios/subir-foto/ (Formato JSON + base64)');
 
-      // 3. Obtener token de autenticación
+      // Obtener token de autenticación
       const token = localStorage.getItem('access_token') || 
                    localStorage.getItem('authToken') || 
                    sessionStorage.getItem('access_token') ||
@@ -383,103 +385,82 @@ export const propietariosService = {
         throw new Error('No se encontró token de autenticación. Por favor, inicia sesión nuevamente.');
       }
       
-      console.log('🔄 Propietarios: Preparando subida de múltiples fotos...');
-      console.log(`📸 Total fotos a subir: ${fotos.length}`);
+      console.log('🔄 Propietarios: Preparando conversión a base64...');
+      console.log(`📸 Total fotos a procesar: ${fotos.length}`);
       
-      // 4. SUBIR MÚLTIPLES FOTOS: Una petición por cada foto
-      const fotosSubidas: string[] = [];
-      const errores: string[] = [];
+      // 🚀 NUEVO: Convertir todas las fotos a base64
+      const fotosBase64 = await Promise.all(
+        fotos.map(foto => this.convertToBase64(foto))
+      );
       
-      for (let i = 0; i < fotos.length; i++) {
-        const foto = fotos[i];
-        console.log(`📤 Subiendo foto ${i + 1}/${fotos.length}: ${foto.name}`);
-        
-        try {
-          const formData = new FormData();
-          formData.append('foto', foto);
-          
-          const fetchResponse = await fetch('http://localhost:8000/api/authz/propietarios/subir-foto/', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-              // NO Content-Type - FormData lo maneja automáticamente
-            },
-            body: formData
-          });
-          
-          // Verificar respuesta individual
-          if (!fetchResponse.ok) {
-            const errorData = await fetchResponse.json().catch(() => ({}));
-            console.error(`❌ Error subiendo foto ${i + 1}:`, errorData);
-            errores.push(`Foto ${i + 1} (${foto.name}): ${errorData.detail || fetchResponse.statusText}`);
-            continue;
-          }
-          
-          // Procesar respuesta exitosa
-          const data = await fetchResponse.json();
-          console.log(`✅ Foto ${i + 1} subida exitosamente:`, data);
-          
-          if (data.success && data.data && data.data.foto_url) {
-            fotosSubidas.push(data.data.foto_url);
-            console.log(`🎉 URL Dropbox ${i + 1}:`, data.data.foto_url);
-          } else {
-            errores.push(`Foto ${i + 1} (${foto.name}): No se recibió URL de Dropbox`);
-          }
-          
-        } catch (fotoError: any) {
-          console.error(`❌ Error procesando foto ${i + 1}:`, fotoError);
-          errores.push(`Foto ${i + 1} (${foto.name}): ${fotoError.message}`);
-        }
+      console.log('✅ Fotos convertidas a base64:', fotosBase64.length);
+      
+      // 🚀 NUEVO: Envío optimizado con JSON
+      const fetchResponse = await fetch('http://127.0.0.1:8000/api/authz/propietarios/subir-foto/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fotos_base64: fotosBase64
+        })
+      });
+      
+      console.log(`📤 Respuesta del servidor:`, fetchResponse.status);
+      
+      if (!fetchResponse.ok) {
+        const errorText = await fetchResponse.text();
+        console.error(`❌ Error HTTP:`, fetchResponse.status, errorText);
+        throw new Error(`HTTP ${fetchResponse.status}: ${errorText}`);
       }
       
-      // 5. Evaluar resultados de múltiples subidas
-      console.log(`📊 RESUMEN SUBIDA MÚLTIPLE:`);
-      console.log(`   ✅ Fotos subidas exitosamente: ${fotosSubidas.length}/${fotos.length}`);
-      console.log(`   ❌ Fotos con errores: ${errores.length}`);
+      const data = await fetchResponse.json();
+      console.log(`✅ Respuesta del backend (formato mejorado):`, data);
       
-      if (errores.length > 0) {
-        console.log('❌ ERRORES DETALLADOS:');
-        errores.forEach(error => console.log(`   • ${error}`));
+      if (!data.success) {
+        throw new Error(data.message || 'Error procesando fotos en el backend');
       }
       
-      if (fotosSubidas.length > 0) {
-        console.log('✅ URLs DE DROPBOX GENERADAS:');
-        fotosSubidas.forEach((url, index) => {
+      // 🚀 NUEVO: Procesar respuesta mejorada del backend
+      console.log(`📊 RESUMEN SUBIDA OPTIMIZADA:`);
+      console.log(`   ✅ Fotos procesadas: ${data.data.fotos_subidas}`);
+      console.log(`   📊 Total en sistema: ${data.data.total_fotos_sistema}`);
+      console.log(`   🤖 Reconocimiento ID: ${data.data.reconocimiento_id}`);
+      console.log(`   🔄 Reconocimiento activo: ${data.data.reconocimiento_activo ? 'SÍ' : 'NO'}`);
+      
+      if (data.data.urls_fotos_nuevas && data.data.urls_fotos_nuevas.length > 0) {
+        console.log('✅ URLs NUEVAS GENERADAS:');
+        data.data.urls_fotos_nuevas.forEach((url, index) => {
           console.log(`   📸 Foto ${index + 1}: ${url}`);
           console.log(`   🔗 Es Dropbox: ${url.includes('dropbox') ? 'SÍ ✅' : 'NO ❌'}`);
         });
       }
       
-      // 6. Verificar si al menos una foto se subió
-      if (fotosSubidas.length === 0) {
-        const mensajeError = errores.length > 0 ? 
-          `No se pudo subir ninguna foto: ${errores.join('; ')}` :
-          'Error desconocido: No se subieron fotos';
-        throw new Error(mensajeError);
+      if (data.advertencias && data.advertencias.length > 0) {
+        console.log('⚠️ ADVERTENCIAS:');
+        data.advertencias.forEach(advertencia => console.log(`   • ${advertencia}`));
       }
       
-      // 7. Si hay errores parciales, mostrarlos pero continuar
-      let mensajeRespuesta = `${fotosSubidas.length} foto(s) subida(s) exitosamente a Dropbox`;
-      if (errores.length > 0) {
-        mensajeRespuesta += `. ${errores.length} foto(s) fallaron: ${errores.join('; ')}`;
-      }
-      
-      // 8. Respuesta adaptada para múltiples fotos
+      // 🚀 NUEVO: Respuesta adaptada al formato mejorado
       const response = {
         success: true,
         data: {
-          fotos_urls: fotosSubidas, // Array completo de URLs subidas
-          total_fotos: fotosSubidas.length,
-          mensaje: mensajeRespuesta,
-          fotos_exitosas: fotosSubidas.length,
-          fotos_fallidas: errores.length,
-          errores_detalle: errores.length > 0 ? errores : undefined
+          fotos_subidas: data.data.fotos_subidas,
+          total_fotos_sistema: data.data.total_fotos_sistema,
+          reconocimiento_id: data.data.reconocimiento_id,
+          reconocimiento_activo: data.data.reconocimiento_activo,
+          urls_fotos_nuevas: data.data.urls_fotos_nuevas || [],
+          mensaje: data.message,
+          // Mantener compatibilidad con formato anterior
+          fotos_urls: data.data.urls_fotos_nuevas || [],
+          total_fotos: data.data.fotos_subidas
         },
-        message: mensajeRespuesta
+        message: data.message
       };
       
-      console.log('✅ Propietarios: MÚLTIPLES FOTOS subidas exitosamente:', response.data);
-      console.log(`🎉 TOTAL URLs de Dropbox generadas: ${fotosSubidas.length}`);
+      console.log('✅ Propietarios: FOTOS subidas exitosamente (formato optimizado):', response.data);
+      console.log(`🎉 TOTAL fotos procesadas: ${response.data.fotos_subidas}`);
       return response;
     } catch (error: any) {
       console.error('❌ Propietarios: Error subiendo fotos:', error);
@@ -488,21 +469,27 @@ export const propietariosService = {
   },
 
   /**
-   * 🎉 Obtener MIS fotos de reconocimiento facial - ENDPOINT CORRECTO SEGÚN BACKEND
-   * ✅ Usa el endpoint del backend: GET /api/authz/propietarios/mis-fotos/
+   * 🚀 Obtener MIS fotos de reconocimiento facial - FORMATO MEJORADO
+   * ✅ Usa el endpoint mejorado: GET /api/authz/propietarios/mis-fotos/
    */
   async obtenerFotosReconocimiento(usuarioId: string | number): Promise<ApiResponse<{
-    fotos_urls: string[];
     total_fotos: number;
+    fotos_urls: string[];
+    copropietario_id: number;
+    reconocimiento_activo: boolean;
+    reconocimiento_id?: number;
+    proveedor_ia?: string;
+    confianza_enrolamiento?: number;
+    // Mantener compatibilidad con formato anterior
     fecha_ultima_actualizacion?: string;
     tiene_reconocimiento?: boolean;
     usuario_email?: string;
     propietario_nombre?: string;
   }>> {
     try {
-      console.log('🎉 Propietarios: Obteniendo MIS fotos desde ENDPOINT BACKEND CORRECTO');
+      console.log('🚀 Propietarios: Obteniendo MIS fotos con formato mejorado');
       
-      const fetchResponse = await fetch(`http://localhost:8000/api/authz/propietarios/mis-fotos/`, {
+      const fetchResponse = await fetch(`http://127.0.0.1:8000/api/authz/propietarios/mis-fotos/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token') || sessionStorage.getItem('access_token')}`,
@@ -516,8 +503,10 @@ export const propietariosService = {
           return {
             success: true,
             data: {
-              fotos_urls: [],
               total_fotos: 0,
+              fotos_urls: [],
+              copropietario_id: 0,
+              reconocimiento_activo: false,
               tiene_reconocimiento: false
             },
             message: 'Usuario no tiene fotos de reconocimiento'
@@ -561,38 +550,39 @@ export const propietariosService = {
       }
 
       if (data.success && data.data) {
-        // Procesar fotos_urls según documentación del backend
-        const fotosUrls = data.data.fotos_urls || data.data.fotos || [];
+        // 🚀 Procesar respuesta mejorada del backend
+        console.log('✅ GET MIS FOTOS: Respuesta exitosa (formato mejorado):', data.data);
         
-        const response: ApiResponse<{
-          fotos_urls: string[];
-          total_fotos: number;
-          fecha_ultima_actualizacion?: string;
-          tiene_reconocimiento?: boolean;
-          usuario_email?: string;
-          propietario_nombre?: string;
-        }> = {
+        const response = {
           success: true,
           data: {
-            fotos_urls: fotosUrls,
-            total_fotos: fotosUrls.length || data.data.total_fotos || 0,
+            total_fotos: data.data.total_fotos || 0,
+            fotos_urls: data.data.fotos_urls || [],
+            copropietario_id: data.data.copropietario_id || 0,
+            reconocimiento_activo: data.data.reconocimiento_activo || false,
+            reconocimiento_id: data.data.reconocimiento_id,
+            proveedor_ia: data.data.proveedor_ia || 'Local',
+            confianza_enrolamiento: data.data.confianza_enrolamiento || 0,
+            // Mantener compatibilidad
             fecha_ultima_actualizacion: data.data.fecha_ultima_actualizacion,
-            tiene_reconocimiento: fotosUrls.length > 0,
+            tiene_reconocimiento: (data.data.fotos_urls || []).length > 0,
             usuario_email: data.data.usuario_email,
             propietario_nombre: data.data.propietario_nombre
           },
-          message: data.message || data.mensaje || 'Fotos obtenidas correctamente'
+          message: data.message || 'Fotos obtenidas correctamente'
         };
         
-        console.log(`✅ Usuario ${usuarioId} tiene ${response.data.total_fotos} fotos de reconocimiento`);
+        console.log(`✅ Usuario ${usuarioId} tiene ${response.data.total_fotos} fotos - IA: ${response.data.proveedor_ia}`);
         return response;
       } else {
         console.log('📸 Respuesta no exitosa del endpoint:', data);
         return {
           success: true,
           data: {
-            fotos_urls: [],
             total_fotos: 0,
+            fotos_urls: [],
+            copropietario_id: 0,
+            reconocimiento_activo: false,
             tiene_reconocimiento: false
           },
           message: 'No se encontraron fotos de reconocimiento'
@@ -611,13 +601,28 @@ export const propietariosService = {
       return {
         success: true,
         data: {
-          fotos_urls: [],
           total_fotos: 0,
+          fotos_urls: [],
+          copropietario_id: 0,
+          reconocimiento_activo: false,
           tiene_reconocimiento: false
         },
         message: 'Error al obtener fotos de reconocimiento'
       };
     }
+  },
+
+  /**
+   * 🛠️ Función helper para convertir archivos a base64
+   * Requerida para el formato optimizado JSON + base64
+   */
+  convertToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   }
 };
 

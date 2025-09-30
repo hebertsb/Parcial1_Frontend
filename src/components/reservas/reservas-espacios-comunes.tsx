@@ -132,6 +132,26 @@ export function ReservasEspaciosComunes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('todos')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [notificacion, setNotificacion] = useState<{tipo: 'success' | 'error' | 'info'; mensaje: string} | null>(null)
+
+  // Función para mostrar notificaciones del servidor
+  const showServerNotification = (tipo: 'success' | 'error' | 'info', mensaje: string) => {
+    setNotificacion({ tipo, mensaje })
+    setTimeout(() => setNotificacion(null), 4000)
+  }
+
+  // Funciones para simular acciones del servidor
+  const confirmarReserva = (id: number, espacio: string) => {
+    showServerNotification('success', `Sistema CondoManager: Reserva confirmada para "${espacio}". Código de reserva: #RSV-2024-${id.toString().padStart(3, '0')}`)
+  }
+
+  const cancelarReserva = (id: number, espacio: string) => {
+    showServerNotification('info', `Sistema CondoManager: Reserva de "${espacio}" cancelada. Depósito reembolsado en 24-48 horas`)
+  }
+
+  const crearNuevaReserva = () => {
+    showServerNotification('success', 'Sistema CondoManager: Nueva reserva registrada exitosamente. Confirmación enviada por email')
+  }
 
   // Navigation handled by sidebar
   const handleVolver = () => {

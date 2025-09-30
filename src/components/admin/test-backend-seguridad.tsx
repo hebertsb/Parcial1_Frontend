@@ -24,7 +24,7 @@ const TestBackendSeguridad: React.FC = () => {
     addResult('🧪 Probando login con credenciales del backend...');
     
     try {
-      const response = await fetch('http://127.0.0.1:8000/auth/login/', {
+      const response = await fetch('http://127.0.0.1:8000/authz/login/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -212,7 +212,7 @@ const TestBackendSeguridad: React.FC = () => {
             <h4 className="font-semibold text-blue-800 mb-2">📡 Configuración Backend:</h4>
             <ul className="text-sm text-blue-700 space-y-1">
               <li>• URL Base: http://127.0.0.1:8000</li>
-              <li>• Login: POST /auth/login/</li>
+              <li>• Login: POST /authz/login/</li>
               <li>• Listar: GET /auth/admin/seguridad/listar/</li>
               <li>• Crear: POST /auth/admin/seguridad/crear/</li>
             </ul>

@@ -150,6 +150,30 @@ export function MantenimientoEspaciosComunes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('todos')
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>('todos')
+  const [notificacion, setNotificacion] = useState<{tipo: 'success' | 'error' | 'info'; mensaje: string} | null>(null)
+
+  // Función para mostrar notificaciones del servidor
+  const showServerNotification = (tipo: 'success' | 'error' | 'info', mensaje: string) => {
+    setNotificacion({ tipo, mensaje })
+    setTimeout(() => setNotificacion(null), 4000)
+  }
+
+  // Funciones para simular acciones del servidor
+  const programarSolicitud = (id: number, titulo: string) => {
+    showServerNotification('info', `Sistema CondoManager: Solicitud "${titulo}" programada para mañana 10:00 AM. Técnico asignado: María González`)
+  }
+
+  const asignarTecnico = (id: number, titulo: string) => {
+    showServerNotification('success', `Sistema CondoManager: Técnico especializado asignado a "${titulo}". Contacto: +591-78945612`)
+  }
+
+  const completarSolicitud = (id: number, titulo: string) => {
+    showServerNotification('success', `Sistema CondoManager: Trabajo "${titulo}" completado exitosamente. Costo final: Bs 125.00`)
+  }
+
+  const crearNuevaSolicitud = () => {
+    showServerNotification('success', 'Sistema CondoManager: Nueva solicitud de mantenimiento registrada. ID #SOL-2024-087')
+  }
 
   const handleVolver = () => {
     router.back()
@@ -216,7 +240,10 @@ export function MantenimientoEspaciosComunes() {
               <p className="text-gray-400 mt-1">Gestión de solicitudes y mantenimiento preventivo</p>
             </div>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={crearNuevaSolicitud}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Nueva Solicitud
           </Button>
@@ -430,16 +457,28 @@ export function MantenimientoEspaciosComunes() {
                     </Button>
                     {solicitud.estado === 'pendiente' && (
                       <>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => programarSolicitud(solicitud.id, solicitud.titulo)}
+                        >
                           Programar
                         </Button>
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => asignarTecnico(solicitud.id, solicitud.titulo)}
+                        >
                           Asignar Técnico
                         </Button>
                       </>
                     )}
                     {solicitud.estado === 'en_proceso' && (
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => completarSolicitud(solicitud.id, solicitud.titulo)}
+                      >
                         Marcar Completado
                       </Button>
                     )}
@@ -554,6 +593,22 @@ export function MantenimientoEspaciosComunes() {
           </div>
         )}
       </div>
+
+      {/* Notificación del servidor */}
+      {notificacion && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-md ${
+          notificacion.tipo === 'success' ? 'bg-green-600 text-white' :
+          notificacion.tipo === 'error' ? 'bg-red-600 text-white' :
+          'bg-blue-600 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {notificacion.tipo === 'success' && <CheckCircle2 className="h-5 w-5" />}
+            {notificacion.tipo === 'error' && <AlertTriangle className="h-5 w-5" />}
+            {notificacion.tipo === 'info' && <Clock className="h-5 w-5" />}
+            <span className="text-sm font-medium">{notificacion.mensaje}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
