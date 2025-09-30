@@ -16,8 +16,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
-.env*
+# env files - ignorar archivos locales, permitir production
+.env
+.env.local
+.env.development.local
+.env.test.local
+# PERMITIR .env.production para Netlify
 
 # vercel
 .vercel
