@@ -67,25 +67,18 @@ export const reconocimientoSeguridadService = {
     try {
       console.log('🔍 Procesando reconocimiento facial...');
       
-      const response = await fetch('http://localhost:8000/api/authz/seguridad/reconocimiento-facial/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify({ imagen: imagenBase64 }),
+      const response = await apiClient.post<ReconocimientoResponse>('/authz/seguridad/reconocimiento-facial/', {
+        imagen: imagenBase64
       });
 
-      if (response.ok) {
-        const data: ReconocimientoResponse = await response.json();
-        console.log('✅ Reconocimiento exitoso:', data);
-        return { success: true, data };
+      if (response.success && response.data) {
+        console.log('✅ Reconocimiento exitoso:', response.data);
+        return { success: true, data: response.data };
       } else {
-        const errorData = await response.json();
-        console.error('❌ Error en reconocimiento:', errorData);
+        console.error('❌ Error en reconocimiento:', response.message);
         return { 
           success: false, 
-          error: errorData.error || `Error ${response.status}: ${response.statusText}` 
+          error: response.message || 'Error en el reconocimiento'
         };
       }
     } catch (error) {
@@ -106,21 +99,14 @@ export const reconocimientoSeguridadService = {
     error?: string 
   }> {
     try {
-      const response = await fetch('http://localhost:8000/api/authz/seguridad/lista-usuarios-activos/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, data };
+      const response = await apiClient.get<{ usuarios: UsuarioActivo[] }>('/authz/seguridad/lista-usuarios-activos/');
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
       } else {
-        const errorData = await response.json();
         return { 
           success: false, 
-          error: errorData.error || `Error ${response.status}` 
+          error: response.message || 'Error obteniendo usuarios'
         };
       }
     } catch (error) {
@@ -140,24 +126,16 @@ export const reconocimientoSeguridadService = {
     error?: string 
   }> {
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/authz/seguridad/buscar-usuarios/?q=${encodeURIComponent(termino)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          },
-        }
+      const response = await apiClient.get<{ usuarios: UsuarioActivo[] }>(
+        `/authz/seguridad/buscar-usuarios/?q=${encodeURIComponent(termino)}`
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, data };
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
       } else {
-        const errorData = await response.json();
         return { 
           success: false, 
-          error: errorData.error || `Error ${response.status}` 
+          error: response.message || 'Error en búsqueda'
         };
       }
     } catch (error) {
@@ -177,21 +155,14 @@ export const reconocimientoSeguridadService = {
     error?: string 
   }> {
     try {
-      const response = await fetch('http://localhost:8000/api/authz/seguridad/estadisticas/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, data };
+      const response = await apiClient.get<EstadisticasGuardia>('/authz/seguridad/estadisticas/');
+      
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
       } else {
-        const errorData = await response.json();
         return { 
           success: false, 
-          error: errorData.error || `Error ${response.status}` 
+          error: response.message || 'Error obteniendo estadísticas'
         };
       }
     } catch (error) {

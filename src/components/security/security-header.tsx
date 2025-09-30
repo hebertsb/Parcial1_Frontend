@@ -1,21 +1,27 @@
 "use client"
 
 /**
- * Header del dashboard de seguridad con información de usuario y logout
+ * Header del dashboard de seguridad con estilo similar al admin
  */
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { 
-  Shield, LogOut, User as UserIcon, Clock, AlertTriangle, CheckCircle, 
-  Settings, HelpCircle, Loader2 
+  Shield, LogOut, User as UserIcon, Settings, 
+  Eye, Activity, Camera, Clock, CheckCircle
 } from "lucide-react"
-import { logoutUser } from "@/lib/auth"
 import type { User } from "@/core/types"
 
 interface SecurityHeaderProps {
@@ -25,29 +31,33 @@ interface SecurityHeaderProps {
 }
 
 export function SecurityHeader({ user, lastUpdate, onLogout }: SecurityHeaderProps) {
-  const [loggingOut, setLoggingOut] = useState(false)
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const { logout } = useAuth()
   const router = useRouter()
 
   const handleLogout = async () => {
-    setLoggingOut(true)
     try {
-      console.log('🚪 SecurityHeader: Cerrando sesión...')
-      await logoutUser()
+      console.log('🚪 SecurityHeader: Cerrando sesión de seguridad...')
+      await logout()
       
-      // Llamar callback si existe
       if (onLogout) {
         onLogout()
       }
       
       console.log('✅ SecurityHeader: Sesión cerrada, redirigiendo...')
-      router.push('/security/login')
+      router.push('/')
     } catch (error) {
       console.error('❌ SecurityHeader: Error durante logout:', error)
-    } finally {
-      setLoggingOut(false)
-      setShowLogoutConfirm(false)
+      router.push('/')
     }
+  }
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   const formatTime = (date: Date) => {
@@ -58,171 +68,127 @@ export function SecurityHeader({ user, lastUpdate, onLogout }: SecurityHeaderPro
     })
   }
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const getUserRoleBadge = () => {
-    if (!user?.role) return null
-    
-    const roleColors = {
-      'seguridad': 'bg-blue-500',
-      'security': 'bg-blue-500',
-      'administrator': 'bg-purple-500',
-      'owner': 'bg-green-500',
-      'propietario': 'bg-green-500',
-      'tenant': 'bg-yellow-500',
-      'inquilino': 'bg-yellow-500',
-      'empleado': 'bg-orange-500'
-    }
-    
-    return (
-      <Badge 
-        className={`${roleColors[user.role as keyof typeof roleColors] || 'bg-gray-500'} text-white text-xs px-2 py-1`}
-      >
-        {user.role}
-      </Badge>
-    )
-  }
-
   const getStatusIndicator = () => {
     const now = new Date()
     const timeDiff = now.getTime() - lastUpdate.getTime()
     const minutes = Math.floor(timeDiff / (1000 * 60))
     
     if (minutes < 2) {
-      return { icon: CheckCircle, color: 'text-green-500', text: 'En línea' }
+      return { icon: CheckCircle, color: 'text-green-500', text: 'Sistema En línea' }
     } else if (minutes < 10) {
-      return { icon: Clock, color: 'text-yellow-500', text: 'Activo' }
+      return { icon: Clock, color: 'text-yellow-500', text: 'Sistema Activo' }
     } else {
-      return { icon: AlertTriangle, color: 'text-red-500', text: 'Inactivo' }
+      return { icon: Activity, color: 'text-orange-500', text: 'Sistema Inactivo' }
     }
   }
 
   const status = getStatusIndicator()
-  const StatusIcon = status.icon
 
   return (
-    <Card className="w-full bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white shadow-lg border-0">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          {/* Logo y título */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-8 w-8 text-blue-300" />
-              <div>
-                <h1 className="text-xl font-bold text-white">
-                  Panel de Seguridad
-                </h1>
-                <p className="text-blue-200 text-sm">
-                  Sistema de Reconocimiento Facial
-                </p>
-              </div>
+    <header className="border-b border-gray-800 bg-gray-900 backdrop-blur supports-[backdrop-filter]:bg-gray-900/95 sticky top-0 z-50">
+      <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        {/* Logo/Brand - Lado izquierdo */}
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Shield className="h-6 w-6 text-emerald-400" />
+            <div>
+              <h1 className="text-lg font-bold text-white">Panel de Seguridad</h1>
+              <p className="text-xs text-gray-400">Sistema de Reconocimiento Facial</p>
             </div>
           </div>
-
-          {/* Centro - Información del sistema */}
-          <div className="flex items-center space-x-6 text-sm">
-            <div className="flex items-center space-x-2">
-              <StatusIcon className={`h-4 w-4 ${status.color}`} />
-              <span className="text-blue-100">
-                Sistema {status.text}
-              </span>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-blue-300" />
-              <span className="text-blue-100">
-                {formatDate(lastUpdate)} - {formatTime(lastUpdate)}
-              </span>
-            </div>
-          </div>
-
-          {/* Usuario y logout */}
-          <div className="flex items-center space-x-4">
-            {user && (
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium text-white">
-                      {user.name || 'Usuario'}
-                    </span>
-                    {getUserRoleBadge()}
-                  </div>
-                  <p className="text-blue-200 text-xs">
-                    {user.email || 'Sin email'}
-                  </p>
-                </div>
-                
-                <Avatar className="h-10 w-10 border-2 border-blue-300">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="bg-blue-600 text-white">
-                    <UserIcon className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            )}
-
-            {/* Botón de logout */}
-            <div className="flex items-center space-x-2">
-              {!showLogoutConfirm ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="bg-transparent border-blue-300 text-blue-100 hover:bg-blue-700 hover:text-white"
-                  disabled={loggingOut}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Salir
-                </Button>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    {loggingOut ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <LogOut className="h-4 w-4 mr-2" />
-                    )}
-                    {loggingOut ? 'Saliendo...' : 'Confirmar'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowLogoutConfirm(false)}
-                    disabled={loggingOut}
-                    className="bg-transparent border-blue-300 text-blue-100 hover:bg-blue-700"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              )}
-            </div>
+          
+          {/* Status indicator */}
+          <div className="flex items-center space-x-2 bg-gray-800 px-3 py-1 rounded-full">
+            <status.icon className={`h-4 w-4 ${status.color}`} />
+            <span className="text-xs text-gray-300">{status.text}</span>
+            <span className="text-xs text-gray-400">• {formatTime(lastUpdate)}</span>
           </div>
         </div>
 
-        {/* Mensaje de logout en progreso */}
-        {loggingOut && (
-          <div className="mt-3">
-            <Alert className="bg-blue-800 border-blue-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription className="text-blue-100">
-                Cerrando sesión y limpiando datos...
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        {/* User menu - Lado derecho */}
+        <div className="flex items-center space-x-4">
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-auto px-3 hover:bg-gray-800">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-8 w-8 border-2 border-gray-600">
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback className="bg-emerald-600 text-white text-xs">
+                        {user.name ? getUserInitials(user.name) : <UserIcon className="h-4 w-4" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-left">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-white">
+                          {user.name || 'Personal de Seguridad'}
+                        </span>
+                        <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5">
+                          {user.role === 'security' ? 'Seguridad' : 
+                           user.role === 'administrator' ? 'Admin' : user.role}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-blue-200">
+                        {user.email || 'seguridad@facial.com'}
+                      </p>
+                    </div>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user.name || 'Personal de Seguridad'}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email || 'seguridad@facial.com'}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Shield className="h-3 w-3 text-blue-500" />
+                      <span className="text-xs text-blue-600 font-medium">
+                        Personal de Seguridad
+                      </span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                
+                {/* Profile Menu Items */}
+                <DropdownMenuItem className="cursor-pointer">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Ver Perfil</span>
+                    <span className="text-xs text-muted-foreground">Información personal</span>
+                  </div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Configuración</span>
+                    <span className="text-xs text-muted-foreground">Ajustes del sistema</span>
+                  </div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem className="cursor-pointer">
+                  <Eye className="mr-2 h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Monitoreo</span>
+                    <span className="text-xs text-muted-foreground">Panel de vigilancia</span>
+                  </div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar Sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+    </header>
   )
 }

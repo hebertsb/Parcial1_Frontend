@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await logoutUser()
+      logoutUser()
       setAuthState({
         user: null,
         isLoading: false,
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error)
       // Still clear local state even if server logout fails
-      setCurrentUser(null)
+      logoutUser()
       setAuthState({
         user: null,
         isLoading: false,

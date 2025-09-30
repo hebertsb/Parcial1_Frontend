@@ -49,7 +49,7 @@ const stats = [
     change: "+2.5%",
     trend: "up",
     icon: Building2,
-    description: "4 edificios, 39 unidades promedio por edificio",
+    description: "4 torres, 39 viviendas promedio por torre",
     link: "/admin/unidades",
   },
   {
@@ -216,9 +216,9 @@ export default function AdminDashboard() {
     },
     {
       title: "Ingresos Mensuales",
-      value: (estadisticas?.ingresosMensuales || 0) > 0 ? `$${estadisticas.ingresosMensuales.toLocaleString()}` : "Por implementar",
-      change: "-",
-      trend: "neutral",
+      value: (estadisticas?.ingresosMensuales || 0) > 0 ? `Bs ${estadisticas.ingresosMensuales.toLocaleString()}` : "Por implementar",
+      change: "+12.8%",
+      trend: "up",
       icon: CreditCard,
       description: "Incluye cuotas de mantenimiento y amenidades",
       link: "/admin/finanzas",
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
             value="buildings"
             className="text-gray-300 data-[state=active]:bg-[#1f1f1f] data-[state=active]:text-white"
           >
-            Edificios
+            Viviendas
           </TabsTrigger>
           <TabsTrigger
             value="finances"

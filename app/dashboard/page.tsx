@@ -3,7 +3,7 @@
 import { useAuth } from "@/contexts/auth-context"
 import { SpanishDashboardLayout } from "@/components/dashboard/spanish-dashboard-layout"
 import AdminDashboard from "@/components/admin/admin-dashboard"
-import { SecurityDashboard } from "@/components/dashboard/security-dashboard"
+import { SecurityDashboard } from "@/components/seguridad/security-dashboard"
 import { OwnerDashboard } from "@/components/dashboard/owner-dashboard"
 import { TenantDashboard } from "@/components/dashboard/tenant-dashboard"
 import { useRouter } from "next/navigation"

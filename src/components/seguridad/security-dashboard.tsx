@@ -9,7 +9,8 @@ import { AlertTriangle, Users, Camera, Activity, Shield, Eye, UserCheck, Refresh
 import { reconocimientoFacialService } from '@/features/seguridad/services'
 import { incidentesService, visitasService, alertasService } from '@/features/seguridad/services'
 import { getCurrentUser } from '@/lib/auth'
-import { SecurityHeader } from './security-header'
+import { SecurityHeader } from '@/components/security/security-header'
+import { WidgetEscanerSeguridad } from '@/components/security/widget-escaner-seguridad'
 
 interface DashboardData {
   usuarios_activos: number
@@ -190,14 +191,15 @@ export function SecurityDashboard() {
       
       if (response.success && response.data) {
         console.log('✅ Endpoint funcionando')
-        console.log('📋 Cantidad de usuarios:', response.data.length)
+        const usuariosArray = Array.isArray(response.data) ? response.data : []
+        console.log('📋 Cantidad de usuarios:', usuariosArray.length)
         
-        if (response.data.length > 0) {
-          console.log('📋 Primer usuario - Propiedades disponibles:', Object.keys(response.data[0]))
-          console.log('📋 Primer usuario - Datos completos:', response.data[0])
+        if (usuariosArray.length > 0) {
+          console.log('📋 Primer usuario - Propiedades disponibles:', Object.keys(usuariosArray[0]))
+          console.log('📋 Primer usuario - Datos completos:', usuariosArray[0])
           
           // Verificar si viene fotos_urls
-          const primerUsuario = response.data[0] as any
+          const primerUsuario = usuariosArray[0] as any
           const tieneFotosUrls = 'fotos_urls' in primerUsuario
           console.log(`🔍 ¿Tiene fotos_urls? ${tieneFotosUrls ? '✅ SÍ' : '❌ NO'}`)
           
@@ -227,12 +229,13 @@ export function SecurityDashboard() {
       // Primero obtener usuarios
       const usuariosResponse = await reconocimientoFacialService.obtenerUsuariosConReconocimiento()
       
-      if (usuariosResponse.success && usuariosResponse.data && usuariosResponse.data.length > 0) {
-        console.log(`📋 Probando con ${usuariosResponse.data.length} usuarios`)
+      if (usuariosResponse.success && usuariosResponse.data) {
+        const usuariosArray = Array.isArray(usuariosResponse.data) ? usuariosResponse.data : []
+        console.log(`📋 Probando con ${usuariosArray.length} usuarios`)
         
         // Probar con los primeros 3 usuarios
-        for (let i = 0; i < Math.min(usuariosResponse.data.length, 3); i++) {
-          const usuario = usuariosResponse.data[i] as any
+        for (let i = 0; i < Math.min(usuariosArray.length, 3); i++) {
+          const usuario = usuariosArray[i] as any
           console.log(`\n👤 Usuario ${i + 1}: ${usuario.email} (ID: ${usuario.id})`)
           
           try {
@@ -332,24 +335,21 @@ export function SecurityDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header de Seguridad con Logout */}
-      <SecurityHeader 
-        user={usuarioSeguridad} 
-        lastUpdate={lastUpdate || new Date()} 
-        onLogout={() => {
-          console.log('🚪 Logout desde SecurityDashboard')
-          // El SecurityHeader ya maneja la redirección
-        }}
-      />
-      
+    <div className="min-h-screen bg-gray-900">
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Panel de Seguridad</h1>
-            <p className="text-gray-600">Sistema de Reconocimiento Facial y Monitoreo</p>
+            <h1 className="text-3xl font-bold text-white">Panel de Seguridad</h1>
+            <p className="text-gray-400">Sistema de Reconocimiento Facial y Monitoreo</p>
           </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={() => window.open('/admin/seguridad/visitas', '_blank')}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            Control de Visitas
+          </Button>
           <Button onClick={testearEndpointUsuariosReconocimiento} variant="outline" size="sm">
             📊 Test Endpoint Principal
           </Button>
@@ -372,80 +372,127 @@ export function SecurityDashboard() {
 
       {/* Estadísticas Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuarios Activos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Usuarios Activos</CardTitle>
+            <Users className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{usuariosActivos.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{usuariosActivos.length}</div>
+            <p className="text-xs text-gray-400">
               Con reconocimiento facial
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reconocimientos Hoy</CardTitle>
-            <Camera className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Reconocimientos Hoy</CardTitle>
+            <Camera className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardReconocimiento?.reconocimientos_hoy || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{dashboardReconocimiento?.reconocimientos_hoy || 0}</div>
+            <p className="text-xs text-gray-400">
               Detecciones exitosas
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Incidentes Abiertos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Incidentes Abiertos</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{incidentes.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{incidentes.length}</div>
+            <p className="text-xs text-gray-400">
               Requieren atención
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Alertas Activas</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Alertas Activas</CardTitle>
+            <Shield className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{alertas.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{alertas.length}</div>
+            <p className="text-xs text-gray-400">
               Monitoreo continuo
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Usuarios con Reconocimiento Activo */}
-      <Card>
+      {/* Nueva sección: Estadística de Visitas Tercerizadas */}
+      <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <UserCheck className="h-5 w-5" />
-            Usuarios con Reconocimiento Activo ({usuariosActivos.length})
+            Control de Visitas - Personal Tercerizado
           </CardTitle>
         </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-emerald-400">8</div>
+              <p className="text-sm text-gray-300">Visitas Hoy</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">6</div>
+              <p className="text-sm text-gray-300">Autorizadas</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">3</div>
+              <p className="text-sm text-gray-300">En Trabajo</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-400">2</div>
+              <p className="text-sm text-gray-300">Esperando</p>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-center">
+            <Button 
+              onClick={() => window.open('/admin/seguridad/visitas', '_blank')}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              Abrir Control de Visitas
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grid con Widget Escáner y Usuarios */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Widget Escáner QR */}
+        <div className="lg:col-span-1">
+          <WidgetEscanerSeguridad />
+        </div>
+        
+        {/* Usuarios con Reconocimiento Activo */}
+        <div className="lg:col-span-2">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <UserCheck className="h-5 w-5" />
+                Usuarios con Reconocimiento Activo ({usuariosActivos.length})
+              </CardTitle>
+            </CardHeader>
         <CardContent>
           {usuariosActivos.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {usuariosActivos.map((usuario, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-3">
+                <div key={index} className="border border-gray-600 bg-gray-700 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">{usuario.nombre_completo || usuario.email}</h3>
+                    <h3 className="font-semibold text-white">{usuario.nombre_completo || usuario.email}</h3>
                     <Badge variant={usuario.activo ? "default" : "secondary"}>
                       {usuario.activo ? "Activo" : "Inactivo"}
                     </Badge>
                   </div>
                   
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-300">
                     <p>📧 {usuario.email}</p>
                     <p>🏢 {usuario.unidad_residencial || 'No especificada'}</p>
                     <p>📸 {usuario.total_fotos || 0} fotos registradas</p>
@@ -455,7 +502,7 @@ export function SecurityDashboard() {
                   {/* Mostrar fotos */}
                   {usuario.fotos_urls && usuario.fotos_urls.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Fotos de reconocimiento:</p>
+                      <p className="text-sm font-medium text-gray-200">Fotos de reconocimiento:</p>
                       <div className="flex gap-2 flex-wrap">
                         {usuario.fotos_urls.slice(0, 4).map((foto: string, fotoIndex: number) => (
                           <img 
@@ -476,35 +523,37 @@ export function SecurityDashboard() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-400">
               <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No hay usuarios con reconocimiento facial activo</p>
             </div>
           )}
         </CardContent>
       </Card>
+        </div>
+      </div>
 
       {/* Estado del Sistema */}
-      <Card>
+      <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <Activity className="h-5 w-5" />
             Estado del Sistema
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-green-600 font-semibold">Reconocimiento Facial</div>
-              <div className="text-sm text-green-700">✅ Operativo</div>
+            <div className="text-center p-4 bg-gray-700 rounded-lg">
+              <div className="text-green-400 font-semibold">Reconocimiento Facial</div>
+              <div className="text-sm text-green-300">✅ Operativo</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-blue-600 font-semibold">Monitoreo 24/7</div>
-              <div className="text-sm text-blue-700">🔄 Activo</div>
+            <div className="text-center p-4 bg-gray-700 rounded-lg">
+              <div className="text-blue-400 font-semibold">Monitoreo 24/7</div>
+              <div className="text-sm text-blue-300">🔄 Activo</div>
             </div>
-            <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <div className="text-yellow-600 font-semibold">Última Actualización</div>
-              <div className="text-sm text-yellow-700">
+            <div className="text-center p-4 bg-gray-700 rounded-lg">
+              <div className="text-yellow-400 font-semibold">Última Actualización</div>
+              <div className="text-sm text-yellow-300">
                 {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Nunca'}
               </div>
             </div>

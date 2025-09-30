@@ -33,6 +33,7 @@ import {
   procesarSolicitudCompleta,
   type SolicitudRegistroAPI 
 } from '@/features/admin/solicitudes-service';
+import { apiClient } from '@/core/api/client';
 import { useFaceRecognition } from '@/features/facial/hooks';
 import { registroFacialService } from '@/features/facial/registro-service';
 
@@ -93,39 +94,31 @@ export function GestionSolicitudesRegistro() {
     try {
       console.log('🔄 Creando solicitud de prueba...');
       
-      const response = await fetch('http://localhost:8000/api/authz/propietarios/solicitud/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          nombres: nombreAleatorio,
-          apellidos: apellidoAleatorio,
-          documento_identidad: cedulaAleatoria,
-          email: emailAleatorio,
-          telefono: telefonoAleatorio,
-          numero_casa: viviendaAleatoria,
-          fecha_nacimiento: '1990-01-01',
-          acepta_terminos: true,
-          acepta_tratamiento_datos: true,
-          password: 'TempPass123!',
-          password_confirm: 'TempPass123!',  // Campo adicional requerido
-          confirm_password: 'TempPass123!'   // Campo adicional requerido
-        })
+      const response = await apiClient.post('/authz/propietarios/solicitud/', {
+        nombres: nombreAleatorio,
+        apellidos: apellidoAleatorio,
+        documento_identidad: cedulaAleatoria,
+        email: emailAleatorio,
+        telefono: telefonoAleatorio,
+        numero_casa: viviendaAleatoria,
+        fecha_nacimiento: '1990-01-01',
+        acepta_terminos: true,
+        acepta_tratamiento_datos: true,
+        password: 'TempPass123!',
+        password_confirm: 'TempPass123!',  // Campo adicional requerido
+        confirm_password: 'TempPass123!'   // Campo adicional requerido
       });
       
-      if (response.ok) {
-        const result = await response.json();
+      if (response.success) {
+        const result = response.data;
         console.log('✅ Solicitud creada:', result);
         alert(`✅ ¡Solicitud creada exitosamente!\n\n📝 Detalles:\n• Nombre: ${nombreAleatorio} ${apellidoAleatorio}\n• Email: ${emailAleatorio}\n• Vivienda: ${viviendaAleatoria}\n• Cédula: ${cedulaAleatoria}\n\n🔄 Recargando lista...`);
         
         // Recargar la lista de solicitudes
         await cargarSolicitudes();
       } else {
-        const errorData = await response.json();
-        console.error('❌ Error creando solicitud:', errorData);
-        alert(`❌ Error creando solicitud: ${errorData.detail || errorData.message || 'Error desconocido'}`);
+        console.error('❌ Error creando solicitud:', response.message);
+        alert(`❌ Error creando solicitud: ${response.message || 'Error desconocido'}`);
       }
       
     } catch (error) {

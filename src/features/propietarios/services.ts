@@ -383,78 +383,103 @@ export const propietariosService = {
         throw new Error('No se encontró token de autenticación. Por favor, inicia sesión nuevamente.');
       }
       
-      console.log('🔄 Propietarios: Preparando FormData para backend...');
+      console.log('🔄 Propietarios: Preparando subida de múltiples fotos...');
+      console.log(`📸 Total fotos a subir: ${fotos.length}`);
       
-      // 4. USAR ENDPOINT REAL DEL BACKEND: FormData según documentación
-      const formData = new FormData();
-      const primeraFoto = fotos[0]; // Subir una foto por vez según backend
-      formData.append('foto', primeraFoto);
+      // 4. SUBIR MÚLTIPLES FOTOS: Una petición por cada foto
+      const fotosSubidas: string[] = [];
+      const errores: string[] = [];
       
-      const fetchResponse = await fetch('http://localhost:8000/api/authz/propietarios/subir-foto/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-          // NO Content-Type - FormData lo maneja automáticamente
-        },
-        body: formData
-      });
-
-      // 5. Verificar respuesta
-      if (!fetchResponse.ok) {
-        const errorData = await fetchResponse.json().catch(() => ({}));
+      for (let i = 0; i < fotos.length; i++) {
+        const foto = fotos[i];
+        console.log(`📤 Subiendo foto ${i + 1}/${fotos.length}: ${foto.name}`);
         
-        console.error('❌ Error en petición:');
-        console.error('   • Status:', fetchResponse.status);
-        console.error('   • StatusText:', fetchResponse.statusText);
-        console.error('   • URL:', fetchResponse.url);
-        console.error('   • Error data:', errorData);
-        
-        // Manejo específico de errores
-        if (fetchResponse.status === 401) {
-          // Limpiar tokens expirados
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('authToken');
-          sessionStorage.removeItem('access_token');
-          sessionStorage.removeItem('authToken');
+        try {
+          const formData = new FormData();
+          formData.append('foto', foto);
           
-          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+          const fetchResponse = await fetch('http://localhost:8000/api/authz/propietarios/subir-foto/', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+              // NO Content-Type - FormData lo maneja automáticamente
+            },
+            body: formData
+          });
+          
+          // Verificar respuesta individual
+          if (!fetchResponse.ok) {
+            const errorData = await fetchResponse.json().catch(() => ({}));
+            console.error(`❌ Error subiendo foto ${i + 1}:`, errorData);
+            errores.push(`Foto ${i + 1} (${foto.name}): ${errorData.detail || fetchResponse.statusText}`);
+            continue;
+          }
+          
+          // Procesar respuesta exitosa
+          const data = await fetchResponse.json();
+          console.log(`✅ Foto ${i + 1} subida exitosamente:`, data);
+          
+          if (data.success && data.data && data.data.foto_url) {
+            fotosSubidas.push(data.data.foto_url);
+            console.log(`🎉 URL Dropbox ${i + 1}:`, data.data.foto_url);
+          } else {
+            errores.push(`Foto ${i + 1} (${foto.name}): No se recibió URL de Dropbox`);
+          }
+          
+        } catch (fotoError: any) {
+          console.error(`❌ Error procesando foto ${i + 1}:`, fotoError);
+          errores.push(`Foto ${i + 1} (${foto.name}): ${fotoError.message}`);
         }
-        
-        if (fetchResponse.status === 405) {
-          throw new Error('Método no permitido. Verificar configuración del endpoint.');
-        }
-        
-        throw new Error(errorData.detail || errorData.message || `Error ${fetchResponse.status}: ${fetchResponse.statusText}`);
-      }
-
-      // 6. Procesar respuesta según documentación del backend
-      const data = await fetchResponse.json();
-      console.log('📡 Respuesta del POST subir foto:', data);
-      console.log('📡 SUBIDA: Estructura completa:', JSON.stringify(data, null, 2));
-      
-      // Según documentación: { success: true, data: { foto_url, total_fotos, reconocimiento_id } }
-      if (data.success && data.data && data.data.foto_url) {
-        console.log('🎉 SUBIDA: ¡URL de Dropbox recibida!:', data.data.foto_url);
-        console.log('🎉 SUBIDA: Es Dropbox?:', data.data.foto_url.includes('dropbox') ? 'SÍ ✅' : 'NO ❌');
-        console.log('🎉 SUBIDA: Total fotos ahora:', data.data.total_fotos);
-        console.log('🎉 SUBIDA: Reconocimiento ID:', data.data.reconocimiento_id);
-      } else {
-        console.log('❌ SUBIDA: NO se recibió foto_url del backend');
-        console.log('❌ SUBIDA: data:', data);
       }
       
-      // Respuesta adaptada al formato esperado por el frontend
+      // 5. Evaluar resultados de múltiples subidas
+      console.log(`📊 RESUMEN SUBIDA MÚLTIPLE:`);
+      console.log(`   ✅ Fotos subidas exitosamente: ${fotosSubidas.length}/${fotos.length}`);
+      console.log(`   ❌ Fotos con errores: ${errores.length}`);
+      
+      if (errores.length > 0) {
+        console.log('❌ ERRORES DETALLADOS:');
+        errores.forEach(error => console.log(`   • ${error}`));
+      }
+      
+      if (fotosSubidas.length > 0) {
+        console.log('✅ URLs DE DROPBOX GENERADAS:');
+        fotosSubidas.forEach((url, index) => {
+          console.log(`   📸 Foto ${index + 1}: ${url}`);
+          console.log(`   🔗 Es Dropbox: ${url.includes('dropbox') ? 'SÍ ✅' : 'NO ❌'}`);
+        });
+      }
+      
+      // 6. Verificar si al menos una foto se subió
+      if (fotosSubidas.length === 0) {
+        const mensajeError = errores.length > 0 ? 
+          `No se pudo subir ninguna foto: ${errores.join('; ')}` :
+          'Error desconocido: No se subieron fotos';
+        throw new Error(mensajeError);
+      }
+      
+      // 7. Si hay errores parciales, mostrarlos pero continuar
+      let mensajeRespuesta = `${fotosSubidas.length} foto(s) subida(s) exitosamente a Dropbox`;
+      if (errores.length > 0) {
+        mensajeRespuesta += `. ${errores.length} foto(s) fallaron: ${errores.join('; ')}`;
+      }
+      
+      // 8. Respuesta adaptada para múltiples fotos
       const response = {
         success: true,
         data: {
-          fotos_urls: data.data?.foto_url ? [data.data.foto_url] : [],
-          total_fotos: data.data?.total_fotos || 1,
-          mensaje: data.message || 'Foto subida correctamente'
+          fotos_urls: fotosSubidas, // Array completo de URLs subidas
+          total_fotos: fotosSubidas.length,
+          mensaje: mensajeRespuesta,
+          fotos_exitosas: fotosSubidas.length,
+          fotos_fallidas: errores.length,
+          errores_detalle: errores.length > 0 ? errores : undefined
         },
-        message: data.message || 'Foto de reconocimiento subida exitosamente'
+        message: mensajeRespuesta
       };
       
-      console.log('✅ Propietarios: Foto subida exitosamente:', response.data);
+      console.log('✅ Propietarios: MÚLTIPLES FOTOS subidas exitosamente:', response.data);
+      console.log(`🎉 TOTAL URLs de Dropbox generadas: ${fotosSubidas.length}`);
       return response;
     } catch (error: any) {
       console.error('❌ Propietarios: Error subiendo fotos:', error);

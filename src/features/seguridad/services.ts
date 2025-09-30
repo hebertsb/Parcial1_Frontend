@@ -201,11 +201,15 @@ export const reconocimientoFacialService = {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Usuarios con reconocimiento cargados:', data);
+        const backendResponse = await response.json();
+        console.log('✅ Respuesta completa del backend:', backendResponse);
+        
+        // Extraer los datos correctos del backend
+        const data = backendResponse.data;
+        console.log('📦 Datos extraídos:', data);
         
         // 🔍 VERIFICAR Y FILTRAR URLs VÁLIDAS DE DROPBOX
-        if (data.usuarios && Array.isArray(data.usuarios)) {
+        if (data && data.usuarios && Array.isArray(data.usuarios)) {
           console.log('🔍 Procesando y validando URLs de fotos...');
           
           // Procesar cada usuario para filtrar URLs válidas

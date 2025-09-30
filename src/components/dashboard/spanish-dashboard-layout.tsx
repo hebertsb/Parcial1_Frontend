@@ -132,7 +132,7 @@ export function SpanishDashboardLayout({ children }: SpanishDashboardLayoutProps
         <div className="flex items-center justify-between h-16 px-4 border-b border-[#1f1f1f]">
           <div className="flex items-center space-x-2">
             <Building2 className="w-6 h-6 text-white" />
-            <span className="text-sm font-medium text-white">Los Vecinos Ruidosos</span>
+            <span className="text-sm font-medium text-white">Residencial Villa Esperanza</span>
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </div>
           <Button
@@ -179,7 +179,7 @@ export function SpanishDashboardLayout({ children }: SpanishDashboardLayoutProps
             >
               <Menu className="w-4 h-4" />
             </Button>
-            <span className="text-sm font-medium text-white">Los Vecinos Ruidosos</span>
+            <span className="text-sm font-medium text-white">Residencial Villa Esperanza</span>
           </div>
 
           <div className="flex items-center space-x-4">

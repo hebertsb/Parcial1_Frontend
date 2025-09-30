@@ -1,5 +1,5 @@
-import { FinanzasManagement } from "@/components/finanzas/finanzas-management"
+import { FinanzasViviendas } from "@/components/finanzas/finanzas-viviendas"
 
 export default function FinanzasPage() {
-  return <FinanzasManagement />
+  return <FinanzasViviendas />
 }

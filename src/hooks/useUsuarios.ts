@@ -158,7 +158,7 @@ export const useUsuarios = () => {
   };
 
   // Eliminar usuario
-  const eliminarUsuario = async (id: number): Promise<void> => {
+  const eliminarUsuario = async (id: number): Promise<boolean> => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
@@ -179,10 +179,11 @@ export const useUsuarios = () => {
 
       // Recargar lista después de eliminar
       await cargarUsuarios();
+      return true;
       
     } catch (err) {
       console.error('❌ Error eliminando usuario:', err);
-      throw err;
+      return false;
     }
   };
 

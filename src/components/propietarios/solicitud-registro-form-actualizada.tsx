@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, User, Home, CheckCircle, AlertCircle, Info, UserPlus, Trash2 } from 'lucide-react';
+import { apiClient } from '@/core/api/client';
 import Link from 'next/link';
 import { FotoField } from '@/components/ui/foto-field';
 import { registroFacialService } from '@/features/facial/registro-service';
@@ -183,43 +184,23 @@ export function SolicitudRegistroPropietarioFormActualizada() {
 
       console.log('🔍 [DEBUG] Datos que se enviarán al backend:', solicitudData);
 
-      // Llamada real al backend Django
-      const response = await fetch('http://localhost:8000/api/authz/propietarios/solicitud/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(solicitudData)
-      });
+      // Llamada real al backend Django usando apiClient
+      const response = await apiClient.post('/authz/propietarios/solicitud/', solicitudData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ [DEBUG] Error completo del backend:', errorData);
-        console.error('❌ [DEBUG] Status:', response.status, response.statusText);
+      if (!response.success) {
+        console.error('❌ [DEBUG] Error en respuesta del backend:', response.message);
         
         // Mostrar errores específicos de validación si los hay
-        let errorMessage = 'Datos inválidos';
-        if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData.errors) {
-          // Si hay errores de validación de campo
-          const fieldErrors = Object.entries(errorData.errors)
-            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
-            .join('\n');
-          errorMessage = `Errores de validación:\n${fieldErrors}`;
-        }
+        let errorMessage = response.message || 'Datos inválidos';
         
         throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const result = response.data as any;
       console.log('✅ Solicitud creada exitosamente:', result);
       
       // Guardar foto temporalmente para mostrar en panel admin y enrolamiento posterior
-      if (data.foto && result.id && fotoBase64) {
+      if (data.foto && result?.id && fotoBase64) {
         console.log('📸 Guardando foto temporal para solicitud ID:', result.id);
         
         // Guardar archivo para enrolamiento

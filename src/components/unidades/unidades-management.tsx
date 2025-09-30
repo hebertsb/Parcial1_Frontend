@@ -389,22 +389,11 @@ export function UnidadesManagement() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => window.history.back()}
-            variant="outline"
-            size="sm"
-            className="bg-slate-700 hover:bg-slate-600 border-slate-600"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Volver
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Gestión de Unidades</h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Gestión de {estadisticas.total} unidades del condominio
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Gestión de Unidades</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Gestión de {estadisticas.total} unidades del condominio
+          </p>
         </div>
         <div className="flex gap-2">
           <Button

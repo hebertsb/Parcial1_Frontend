@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { SecurityHeader } from '@/components/security/security-header';
+import { SecuritySidebar } from '@/src/components/security/security-sidebar';
 
 export default function SecurityLayout({
   children,
@@ -95,11 +96,14 @@ export default function SecurityLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <SecurityHeader user={user} lastUpdate={new Date()} onLogout={() => {}} />
-      <main className="py-6 px-4 sm:px-6 lg:px-8">
-        {children}
-      </main>
+    <div className="flex h-screen bg-gray-950">
+      <SecuritySidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <SecurityHeader user={user} lastUpdate={new Date()} onLogout={() => {}} />
+        <main className="flex-1 overflow-y-auto bg-gray-900">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

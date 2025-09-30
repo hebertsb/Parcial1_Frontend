@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Loader2, Eye, EyeOff, Shield, Users, Home, Key, UserPlus } from "lucide-react"
+import { Building2, Loader2, Eye, EyeOff, UserPlus, Shield, Home, Users } from "lucide-react"
 import { authService } from "@/lib/auth"
 import { useAuth } from "@/contexts/auth-context"
 import { getDashboardRoute } from "@/lib/roleUtils"
@@ -74,175 +74,182 @@ export function ModernLogin() {
     }
   }
 
-  const demoAccounts = [
-    { role: "Administrator", email: "admin@condomanager.com", password: "password123", icon: Shield, color: "text-red-500" },
-    { role: "Security", email: "seguridad@facial.com", password: "seguridad123", icon: Key, color: "text-blue-500" },
-    { role: "Owner", email: "owner@condomanager.com", password: "password123", icon: Home, color: "text-green-500" },
-    { role: "Tenant", email: "tenant@condomanager.com", password: "password123", icon: Users, color: "text-purple-500" },
-  ]
-
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Hero Image */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <img
-          src="/modern-luxury-condominium-building-exterior-with-g.jpg"
-          alt="Modern Condominium"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-purple-900/60 to-transparent" />
-        <div className="relative z-10 flex flex-col justify-end p-12 text-white">
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-balance">Welcome to CondoManager</h1>
-            <p className="text-xl text-blue-100 text-pretty">
-              The most advanced condominium management platform designed for modern living communities.
-            </p>
-            <div className="flex items-center space-x-6 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span>Real-time monitoring</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative">
+      {/* Imagen de fondo del condominio */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')`
+        }}
+      ></div>
+      
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-screen relative z-10">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          
+          {/* Left Side - Welcome Section */}
+          <div className="hidden lg:block space-y-12 bg-white/80 backdrop-blur-sm rounded-3xl p-12 shadow-xl">
+            <div className="space-y-8">
+              <div className="inline-flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Building2 className="w-8 h-8 text-white" />
+                </div>
+                <h1 className="text-3xl font-bold text-gray-900">Residencial Villa Esperanza</h1>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                <span>Secure payments</span>
+              
+              <div className="space-y-6">
+                <h2 className="text-5xl font-bold text-gray-900 leading-tight">
+                  Sistema de Gestión<br />
+                  <span className="text-slate-700">Residencial</span>
+                </h2>
+                <p className="text-xl text-gray-600 leading-relaxed">
+                  Plataforma integral para la administración moderna de condominios y comunidades residenciales.
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
-                <span>Smart automation</span>
+
+              <div className="grid grid-cols-1 gap-6">
+                <div className="flex items-center space-x-5 p-6 bg-white/70 rounded-2xl border border-gray-200/50 shadow-sm">
+                  <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center">
+                    <Shield className="w-7 h-7 text-slate-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Seguridad Avanzada</h3>
+                    <p className="text-gray-600">Control de acceso y reconocimiento facial</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-5 p-6 bg-white/70 rounded-2xl border border-gray-200/50 shadow-sm">
+                  <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
+                    <Home className="w-7 h-7 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Gestión Integral</h3>
+                    <p className="text-gray-600">Administración completa de propiedades</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-5 p-6 bg-white/70 rounded-2xl border border-gray-200/50 shadow-sm">
+                  <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                    <Users className="w-7 h-7 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Comunidad Conectada</h3>
+                    <p className="text-gray-600">Comunicación eficiente entre residentes</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo and Header */}
-          <div className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Building2 className="w-8 h-8 text-white" />
+          {/* Right Side - Login Form */}
+          <div className="w-full max-w-lg mx-auto lg:mx-0">
+            {/* Mobile Header */}
+            <div className="lg:hidden text-center mb-8">
+              <div className="inline-flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900">Residencial Villa Esperanza</h1>
+              </div>
             </div>
-            <div>
-              <h2 className="text-3xl font-bold text-balance">Sign In</h2>
-              <p className="text-muted-foreground mt-2">Access your condominium management dashboard</p>
-            </div>
-          </div>
 
-          {/* Login Form */}
-          <Card className="border-border/50 shadow-xl bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-colors"
-                  />
+            {/* Login Card */}
+            <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
+              <CardContent className="p-10">
+                <div className="text-center mb-10">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Iniciar Sesión</h2>
+                  <p className="text-lg text-gray-600">Accede a tu panel de gestión residencial</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    Password
-                  </Label>
-                  <div className="relative">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="space-y-3">
+                    <Label htmlFor="email" className="text-base font-semibold text-gray-700">
+                      Correo Electrónico
+                    </Label>
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-colors pr-12"
+                      className="h-14 text-lg bg-gray-50 border-gray-200 focus:border-slate-500 focus:ring-slate-500/20 transition-all duration-200"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="password" className="text-base font-semibold text-gray-700">
+                      Contraseña
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Tu contraseña"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-14 text-lg bg-gray-50 border-gray-200 focus:border-slate-500 focus:ring-slate-500/20 transition-all duration-200 pr-14"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive" className="border-red-200 bg-red-50">
+                      <AlertDescription className="text-red-700">
+                        {error === "Invalid email or password" ? "Correo o contraseña incorrectos" : 
+                         error === "An error occurred during login" ? "Ocurrió un error durante el inicio de sesión" : error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-14 text-lg bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Iniciando sesión...
+                      </>
+                    ) : (
+                      "Iniciar Sesión"
+                    )}
+                  </Button>
+                </form>
+
+                {/* Divider */}
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-base">
+                    <span className="px-4 bg-white text-gray-500">¿Nuevo en la plataforma?</span>
                   </div>
                 </div>
 
-                {error && (
-                  <Alert variant="destructive" className="border-destructive/50">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Solicitar Registro */}
-          <Card className="border-border/30 bg-muted/20 backdrop-blur-sm">
-            <CardContent className="p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-3">
-                ¿No tienes cuenta? ¿Eres propietario de una unidad?
-              </p>
-              <Link href="/solicitud-registro">
-                <Button variant="outline" className="w-full">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Solicitar Registro como Propietario
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Demo Accounts */}
-          <Card className="border-border/30 bg-muted/20 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4 text-center">Demo Accounts</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {demoAccounts.map((account) => (
-                  <Button
-                    key={account.role}
-                    variant="ghost"
-                    className="h-auto p-3 flex flex-col items-center space-y-2 hover:bg-background/50 transition-colors"
-                    onClick={() => {
-                      setEmail(account.email)
-                      setPassword(account.password)
-                    }}
-                  >
-                    <account.icon className={`w-5 h-5 ${account.color}`} />
-                    <div className="text-center">
-                      <div className="font-medium text-xs">{account.role}</div>
-                      <div className="text-xs text-muted-foreground truncate max-w-20">
-                        {account.email.split("@")[0]}
-                      </div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-center text-muted-foreground mt-4">
-                Click on any role to autofill credentials
-              </p>
-            </CardContent>
-          </Card>
+                {/* Registro Link */}
+                <div className="text-center">
+                  <Link href="/solicitud-registro">
+                    <Button variant="outline" className="w-full h-14 text-lg border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200">
+                      <UserPlus className="w-5 h-5 mr-2" />
+                      Solicitar Registro como Propietario
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
