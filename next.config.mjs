@@ -13,6 +13,8 @@ const nextConfig = {
   output: 'export',
   trailingSlash: true,
   distDir: 'out',
+  // Configuración para SPA en Netlify
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   // Optimizaciones para desarrollo
   swcMinify: true,
   experimental: {

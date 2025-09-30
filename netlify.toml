@@ -10,7 +10,28 @@
   # Variables de entorno para build
   NEXT_TELEMETRY_DISABLED = "1"
 
-# Configuración para SPA (Single Page Application)
+# Redirects específicos para Next.js App Router
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/security/*"
+  to = "/security/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/propietario/*"
+  to = "/propietario/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/inquilino/*"
+  to = "/inquilino/index.html"
+  status = 200
+
+# Redirect principal para SPA
 [[redirects]]
   from = "/*"
   to = "/index.html"

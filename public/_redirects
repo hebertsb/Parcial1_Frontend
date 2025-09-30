@@ -1,0 +1,15 @@
+# Redirects para Next.js App Router en Netlify
+
+# Rutas específicas
+/admin/*    /admin/index.html   200
+/security/* /security/index.html 200
+/propietario/* /propietario/index.html 200
+/inquilino/* /inquilino/index.html 200
+/registro-propietario/* /registro-propietario/index.html 200
+/solicitud-registro/* /solicitud-registro/index.html 200
+
+# Rutas de API - pasar al backend
+/api/*  http://192.168.56.1:8000/api/:splat  200
+
+# Redirect principal para SPA
+/*    /index.html   200
