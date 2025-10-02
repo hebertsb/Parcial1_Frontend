@@ -101,7 +101,7 @@ export default function SecurityDashboard() {
     
     try {
       // Intentar cargar datos reales del backend
-      const response = await fetch('https://parcial1backend-production.up.railway.app/api/authz/seguridad/dashboard/', {
+      const response = await fetch('http://localhost:8000/api/authz/seguridad/dashboard/', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
           'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ export default function SecurityDashboard() {
       console.log('📋 Cargando actividad reciente del backend...');
       
       // Intentar obtener logs de acceso del backend
-      const response = await fetch('https://parcial1backend-production.up.railway.app/api/authz/seguridad/acceso/logs/?limit=10', {
+      const response = await fetch('http://localhost:8000/api/authz/seguridad/acceso/logs/?limit=10', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
           'Content-Type': 'application/json',

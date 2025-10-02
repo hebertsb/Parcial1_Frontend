@@ -1,6 +1,6 @@
 /**
  * Hook useUsuarios - VERSIÓN LIMPIA Y FUNCIONAL
- * Conecta con https://parcial1backend-production.up.railway.app/api/authz/usuarios/
+ * Conecta con http://localhost:8000/api/authz/usuarios/
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -72,7 +72,7 @@ export const useUsuarios = () => {
 
       console.log('🚀 useUsuarios: Llamando a endpoint de authz para gestión de usuarios');
       
-      const response = await fetch('https://parcial1backend-production.up.railway.app/api/authz/usuarios/', {
+      const response = await fetch('http://localhost:8000/api/authz/usuarios/', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -122,7 +122,7 @@ export const useUsuarios = () => {
 
       console.log('🚀 Obteniendo usuario desde authz:', id);
       
-      const response = await fetch(`https://parcial1backend-production.up.railway.app/api/authz/usuarios/${id}/`, {
+      const response = await fetch(`http://localhost:8000/api/authz/usuarios/${id}/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -165,7 +165,7 @@ export const useUsuarios = () => {
         throw new Error('No hay token de autenticación');
       }
 
-      const response = await fetch(`https://parcial1backend-production.up.railway.app/api/authz/usuarios/${id}/`, {
+      const response = await fetch(`http://localhost:8000/api/authz/usuarios/${id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -200,7 +200,7 @@ export const useUsuarios = () => {
       // PASO 1: Obtener lista actualizada y buscar propietario actual
       console.log('🔍 Obteniendo lista actualizada de usuarios para buscar propietario actual...');
       
-      const responseUsuarios = await fetch('https://parcial1backend-production.up.railway.app/api/authz/usuarios/', {
+      const responseUsuarios = await fetch('http://localhost:8000/api/authz/usuarios/', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -230,7 +230,7 @@ export const useUsuarios = () => {
         console.log('🔄 Convirtiéndolo a inquilino...');
         
         const requestBodyInquilino = { roles: [4] }; // ID 4 = Inquilino
-        const responseInquilino = await fetch(`https://parcial1backend-production.up.railway.app/api/authz/usuarios/${propietarioActual.id}/`, {
+        const responseInquilino = await fetch(`http://localhost:8000/api/authz/usuarios/${propietarioActual.id}/`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -271,7 +271,7 @@ export const useUsuarios = () => {
       const requestBody = { roles: [3] }; // ID 3 = Propietario
       console.log('📤 Request body:', JSON.stringify(requestBody));
       
-      const response = await fetch(`https://parcial1backend-production.up.railway.app/api/authz/usuarios/${inquilinoId}/`, {
+      const response = await fetch(`http://localhost:8000/api/authz/usuarios/${inquilinoId}/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -342,7 +342,7 @@ export const useUsuarios = () => {
       
       const requestBody = { roles: [rolId] };
       
-      const response = await fetch(`https://parcial1backend-production.up.railway.app/api/authz/usuarios/${usuarioId}/`, {
+      const response = await fetch(`http://localhost:8000/api/authz/usuarios/${usuarioId}/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

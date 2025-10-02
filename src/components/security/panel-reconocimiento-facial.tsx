@@ -604,40 +604,75 @@ export default function PanelReconocimientoFacial() {
       }
     };
   }, [stream]);  return (
-    <div className="space-y-6">
-      {/* Header simplificado para integración */}
-      <div className="bg-gradient-to-r from-blue-600/80 to-indigo-600/80 text-white p-4 rounded-lg border border-blue-500/30">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-white/20 rounded-lg">
-            <Camera className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold">Verificación Facial con IA</h3>
-            <p className="text-blue-100 text-sm">Sistema de reconocimiento automático</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header mejorado con diseño moderno */}
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-8 rounded-2xl shadow-2xl border border-blue-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Camera className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                  Verificación Facial con IA
+                </h1>
+                <p className="text-blue-100 text-lg">Sistema de reconocimiento automático avanzado</p>
+              </div>
+            </div>
+            
+            {/* Indicador de estado mejorado */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${camaraActiva ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                <span className="text-sm font-medium">
+                  {camaraActiva ? (camaraPausada ? 'IA Pausada' : 'Sistema Activo') : 'Sistema Inactivo'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Alerta informativa sobre tiempo real */}
-      <Alert className="border-blue-400/30 bg-blue-900/20 backdrop-blur">
-        <Zap className="h-4 w-4 text-blue-400" />
-        <AlertDescription className="text-blue-200">
-          <strong>🚀 Reconocimiento en Tiempo Real:</strong> Al activar la cámara, el sistema automáticamente 
-          comparará cada 2 segundos con las fotos de la base de datos para identificar personas registradas. 
-          <strong>⏸️ Control:</strong> Usa "Pausar IA" para detener temporalmente el reconocimiento automático sin cerrar la cámara.
-          {configuracion.usarIAReal ? ' (IA Real activada - Mayor precisión)' : ' (IA simulada - Respuesta rápida)'}
-        </AlertDescription>
-      </Alert>
+        {/* Alerta informativa mejorada */}
+        <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6 shadow-lg">
+          <div className="flex items-start space-x-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-bold text-gray-900 text-lg">🚀 Reconocimiento en Tiempo Real</h3>
+              <p className="text-gray-700 leading-relaxed">
+                Al activar la cámara, el sistema automáticamente comparará cada 2 segundos con las fotos de la base de datos 
+                para identificar personas registradas.
+              </p>
+              <div className="flex items-center space-x-4 text-sm">
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-600">⏸️ Usar "Pausar IA" para control manual</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className={`w-2 h-2 rounded-full ${configuracion.usarIAReal ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
+                  <span className="text-gray-600">
+                    {configuracion.usarIAReal ? 'IA Real - Mayor precisión' : 'IA Simulada - Respuesta rápida'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Panel de Captura */}
-        <Card className="bg-gray-800/50 border-gray-600 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-white">
-              <Camera className="h-5 w-5" />
-              <span>Captura de Foto</span>
-            </CardTitle>
-          </CardHeader>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Panel de Captura Mejorado */}
+          <div className="xl:col-span-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-2 border-blue-200 shadow-xl rounded-2xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-6">
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Camera className="h-5 w-5" />
+                  </div>
+                  <span>Captura de Imagen</span>
+                </CardTitle>
+              </CardHeader>
           <CardContent className="space-y-4">
             {/* Estado actual del sistema */}
             <div className="bg-gray-700/50 p-3 rounded-lg text-sm border border-gray-600">
@@ -1051,13 +1086,26 @@ export default function PanelReconocimientoFacial() {
             )}
 
             {/* Configuración */}
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-              <h4 className="font-medium text-gray-900">Configuración</h4>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 p-6 rounded-xl shadow-lg space-y-4">
+              <h4 className="font-bold text-gray-900 text-xl flex items-center space-x-2">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <span>Configuración Avanzada</span>
+              </h4>
               
               {/* Umbral de confianza */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Umbral de Confianza
+              <div className="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
+                <label className="flex items-center space-x-2 text-sm font-bold text-gray-900 mb-3">
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                  </div>
+                  <span>Umbral de Confianza</span>
                 </label>
                 <select
                   value={configuracion.umbralConfianza}
@@ -1065,19 +1113,24 @@ export default function PanelReconocimientoFacial() {
                     ...prev,
                     umbralConfianza: e.target.value
                   }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-blue-300"
                 >
-                  <option value="60.0">60% - Flexible</option>
-                  <option value="70.0">70% - Recomendado</option>
-                  <option value="80.0">80% - Estricto</option>
-                  <option value="90.0">90% - Muy estricto</option>
+                  <option value="60.0">🟢 60% - Flexible</option>
+                  <option value="70.0">🟡 70% - Recomendado</option>
+                  <option value="80.0">🟠 80% - Estricto</option>
+                  <option value="90.0">🔴 90% - Muy estricto</option>
                 </select>
               </div>
 
               {/* Buscar en */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Buscar en
+              <div className="bg-white rounded-lg p-4 border border-purple-100 shadow-sm">
+                <label className="flex items-center space-x-2 text-sm font-bold text-gray-900 mb-3">
+                  <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <span>Buscar en Base de Datos</span>
                 </label>
                 <select
                   value={configuracion.buscarEn}
@@ -1085,45 +1138,65 @@ export default function PanelReconocimientoFacial() {
                     ...prev,
                     buscarEn: e.target.value as 'propietarios' | 'inquilinos' | 'todos'
                   }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white shadow-sm transition-all duration-200 hover:border-purple-300"
                 >
-                  <option value="todos">Todos los residentes</option>
-                  <option value="propietarios">Solo propietarios</option>
-                  <option value="inquilinos">Solo inquilinos</option>
+                  <option value="todos">👥 Todos los residentes</option>
+                  <option value="propietarios">🏠 Solo propietarios</option>
+                  <option value="inquilinos">🔑 Solo inquilinos</option>
                 </select>
               </div>
 
               {/* IA Real */}
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="usarIAReal"
-                  checked={configuracion.usarIAReal}
-                  onChange={(e) => setConfiguracion(prev => ({
-                    ...prev,
-                    usarIAReal: e.target.checked
-                  }))}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="usarIAReal" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  <span>Usar IA Real (más preciso)</span>
-                </label>
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-2 border-yellow-200 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="usarIAReal"
+                      checked={configuracion.usarIAReal}
+                      onChange={(e) => setConfiguracion(prev => ({
+                        ...prev,
+                        usarIAReal: e.target.checked
+                      }))}
+                      className="w-5 h-5 rounded border-2 border-yellow-400 text-yellow-600 focus:ring-yellow-500 focus:ring-2 transition-all duration-200"
+                    />
+                  </div>
+                  <label htmlFor="usarIAReal" className="text-sm font-bold text-gray-900 flex items-center space-x-2 cursor-pointer">
+                    <div className="flex items-center space-x-1">
+                      <Zap className="h-5 w-5 text-yellow-500" />
+                      <span className="bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent font-extrabold">
+                        Usar IA Real (más preciso)
+                      </span>
+                    </div>
+                  </label>
+                </div>
+                {configuracion.usarIAReal && (
+                  <div className="mt-2 text-xs text-yellow-700 bg-yellow-100 rounded px-2 py-1">
+                    ⚡ Modo avanzado activado - Mayor precisión y velocidad
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Botón de verificación */}
-            <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-              <p className="text-sm text-blue-800 mb-3 font-medium">
-                🔍 Verificación Manual con IA
-              </p>
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-xl border-2 border-emerald-200 shadow-lg">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-emerald-800 font-bold">
+                  🔍 Verificación Manual con IA Avanzada
+                </p>
+              </div>
               <Button
                 onClick={verificarIdentidad}
                 disabled={!foto || cargando || (camaraActiva && camaraPausada)}
-                className={`w-full ${
-                  !foto ? 'bg-gray-400 hover:bg-gray-400' : 
-                  (camaraActiva && camaraPausada) ? 'bg-yellow-500 hover:bg-yellow-500' : 
-                  'bg-blue-600 hover:bg-blue-700'
+                className={`w-full transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                  !foto ? 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-400 hover:to-gray-500' : 
+                  (camaraActiva && camaraPausada) ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-500 hover:to-orange-500 animate-pulse' : 
+                  'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
                 }`}
                 size="lg"
               >
@@ -1157,15 +1230,19 @@ export default function PanelReconocimientoFacial() {
             </div>
           </CardContent>
         </Card>
+          </div>
 
-        {/* Panel de Resultado */}
-        <Card className="bg-gray-800/50 border-gray-600 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-white">
-              <Eye className="h-5 w-5" />
-              <span>Resultado de Verificación</span>
-            </CardTitle>
-          </CardHeader>
+          {/* Panel de Resultado */}
+          <div className="xl:col-span-1">
+            <Card className="bg-white/80 backdrop-blur-sm border-2 border-purple-200 shadow-xl rounded-2xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6">
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Eye className="h-5 w-5" />
+                  </div>
+                  <span>Resultado de Verificación</span>
+                </CardTitle>
+              </CardHeader>
           <CardContent>
             {/* Error */}
             {error && (
@@ -1264,28 +1341,47 @@ export default function PanelReconocimientoFacial() {
 
                 {/* Estadísticas */}
                 {resultado.estadisticas && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3 flex items-center space-x-2">
-                      <Clock className="h-4 w-4" />
-                      <span>Estadísticas de Procesamiento</span>
+                  <div className="bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 border-2 border-indigo-200 rounded-xl p-6 shadow-lg">
+                    <h4 className="font-bold text-gray-900 mb-4 flex items-center space-x-3 text-xl">
+                      <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <Clock className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                        Estadísticas de Procesamiento
+                      </span>
                     </h4>
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-600">Personas analizadas:</span>
-                        <p className="font-medium">{resultado.estadisticas.personas_analizadas}</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                          <span className="text-gray-800 font-medium text-sm">Personas analizadas</span>
+                        </div>
+                        <p className="font-bold text-green-600 text-2xl">{resultado.estadisticas.personas_analizadas}</p>
                       </div>
-                      <div>
-                        <span className="text-gray-600">Comparaciones:</span>
-                        <p className="font-medium">{resultado.estadisticas.total_comparaciones}</p>
+                      
+                      <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                          <span className="text-gray-800 font-medium text-sm">Comparaciones</span>
+                        </div>
+                        <p className="font-bold text-blue-600 text-2xl">{resultado.estadisticas.total_comparaciones}</p>
                       </div>
-                      <div>
-                        <span className="text-gray-600">Sobre umbral:</span>
-                        <p className="font-medium">{resultado.estadisticas.sobre_umbral}</p>
+                      
+                      <div className="bg-white rounded-lg p-4 border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
+                          <span className="text-gray-800 font-medium text-sm">Sobre umbral</span>
+                        </div>
+                        <p className="font-bold text-purple-600 text-2xl">{resultado.estadisticas.sobre_umbral}</p>
                       </div>
-                      <div>
-                        <span className="text-gray-600">Tiempo:</span>
-                        <p className="font-medium">
+                      
+                      <div className="bg-white rounded-lg p-4 border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+                          <span className="text-gray-800 font-medium text-sm">Tiempo procesamiento</span>
+                        </div>
+                        <p className="font-bold text-orange-600 text-2xl">
                           {formatearTiempo(resultado.estadisticas.tiempo_procesamiento_ms)}
                         </p>
                       </div>
@@ -1304,7 +1400,9 @@ export default function PanelReconocimientoFacial() {
               </div>
             )}
           </CardContent>
-        </Card>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
