@@ -94,13 +94,27 @@ export default function SecurityDashboard() {
             <CardTitle className="text-white">Accesos Rápidos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <Button 
-                className="h-20 flex flex-col items-center justify-center bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => window.open('/admin/seguridad/reconocimiento-facial', '_blank')}
+                className="h-20 flex flex-col items-center justify-center bg-emerald-600 hover:bg-emerald-700 relative"
+                onClick={() => window.location.href = '/security/reconocimiento'}
               >
+                <div className="absolute top-1 right-1">
+                  <span className="text-xs bg-red-500 px-1 rounded text-white animate-pulse">WebRTC</span>
+                </div>
                 <Camera className="h-6 w-6 mb-2" />
-                <span className="text-sm">Reconocimiento</span>
+                <span className="text-sm">Reconocimiento IA</span>
+              </Button>
+              
+              <Button 
+                className="h-20 flex flex-col items-center justify-center bg-purple-600 hover:bg-purple-700 relative"
+                onClick={() => window.location.href = '/security/reconocimiento-facial-ia'}
+              >
+                <div className="absolute top-1 right-1">
+                  <span className="text-xs bg-blue-500 px-1 rounded text-white animate-pulse">ACCESO</span>
+                </div>
+                <Shield className="h-6 w-6 mb-2" />
+                <span className="text-sm">Control Acceso</span>
               </Button>
               
               <Button 

@@ -35,9 +35,11 @@ export const quickLogin = async (): Promise<LoginResponse> => {
 
     const data: LoginResponse = await response.json();
     
-    // Guardar tokens en localStorage
-    localStorage.setItem('access_token', data.access);
-    localStorage.setItem('refresh_token', data.refresh);
+    // Guardar tokens en localStorage (solo en cliente)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+    }
     
     console.log('✅ Login exitoso:', data.user);
     console.log('🔑 Tokens guardados en localStorage');
@@ -50,6 +52,7 @@ export const quickLogin = async (): Promise<LoginResponse> => {
 };
 
 export const checkLoginStatus = (): boolean => {
+  if (typeof window === 'undefined') return false;
   const token = localStorage.getItem('access_token');
   const hasToken = !!token;
   console.log('🔍 Estado de login:', hasToken ? 'Autenticado' : 'No autenticado');
@@ -57,7 +60,9 @@ export const checkLoginStatus = (): boolean => {
 };
 
 export const logout = (): void => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  }
   console.log('🚪 Logout completado');
 };

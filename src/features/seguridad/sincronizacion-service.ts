@@ -189,11 +189,13 @@ export const sincronizacionReconocimientoService = {
    * ✅ Endpoint: GET /api/seguridad/usuarios-reconocimiento/ (IMPLEMENTADO)
    */
   async obtenerUsuariosConReconocimiento(): Promise<ApiResponse<RespuestaUsuariosReconocimiento>> {
-    console.log('🔍 Obteniendo usuarios con reconocimiento facial desde endpoint real...');
+    console.log('🔍 Obteniendo lista de usuarios con reconocimiento facial...');
     
     try {
       const response = await apiClient.get<RespuestaUsuariosReconocimiento>(SEGURIDAD_API.USUARIOS_RECONOCIMIENTO);
-      console.log('✅ Respuesta de usuarios-reconocimiento:', response);
+      console.log('✅ Respuesta usuarios reconocimiento:', {
+        usuarios: response.data?.usuarios?.length || 0
+      });
 
       if (response.success && response.data) {
         return {

@@ -6,9 +6,13 @@
 # next.js
 /.next/
 /out/
+!netlify.toml
 
 # production
 /build
+!next.config.mjs
+!package.json
+!tsconfig.json
 
 # debug
 npm-debug.log*
