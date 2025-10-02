@@ -5,8 +5,8 @@
 
 // Environment configuration - CORREGIDO para evitar duplicación de /api  
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000',
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://127.0.0.1:8000/ws',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://parcial1-backend.railway.app',
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'wss://parcial1-backend.railway.app/ws',
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
 } as const;
