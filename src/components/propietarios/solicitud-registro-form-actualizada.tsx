@@ -56,7 +56,7 @@ const solicitudRegistroSchema = z.object({
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
   confirm_password: z.string().min(8, 'Confirme la contraseña'),
   observaciones: z.string().optional(),
-  foto: z.instanceof(File).optional(),
+  foto: z.any().optional(), // Cambiar de z.instanceof(File) a z.any() para SSR
   acepta_terminos: z.boolean().refine(val => val === true, 'Debe aceptar los términos y condiciones'),
   familiares: z.array(familiarSchema).optional(),
 }).refine((data) => data.password === data.confirm_password, {

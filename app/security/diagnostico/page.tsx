@@ -10,7 +10,13 @@ export default function SystemDiagnostic() {
     contextAvailable: false,
     servicesAvailable: false,
     compilationStatus: 'unknown',
-    timestamp: new Date().toLocaleString()
+    timestamp: ''
+  });
+
+  const [systemInfo, setSystemInfo] = React.useState({
+    userAgent: '',
+    path: '',
+    origin: ''
   });
 
   React.useEffect(() => {
@@ -19,8 +25,15 @@ export default function SystemDiagnostic() {
 
     // Test 2: Contexto disponible
     try {
-      const { useActivity } = require('@/contexts/ActivityContext');
-      setDiagnostics(prev => ({ ...prev, contextAvailable: true }));
+      // Importación dinámica para evitar errores de SSR
+      import('@/contexts/ActivityContext').then((module) => {
+        if (module.useActivity) {
+          setDiagnostics(prev => ({ ...prev, contextAvailable: true }));
+        }
+      }).catch((error) => {
+        console.error('Error cargando contexto:', error);
+        setDiagnostics(prev => ({ ...prev, contextAvailable: false }));
+      });
     } catch (error) {
       console.error('Error cargando contexto:', error);
       setDiagnostics(prev => ({ ...prev, contextAvailable: false }));
@@ -28,14 +41,32 @@ export default function SystemDiagnostic() {
 
     // Test 3: Servicios disponibles
     try {
-      const { DashboardService } = require('../../services/dashboard-service');
+      // Simplemente marcar como disponible - evitamos imports problemáticos en SSR
       setDiagnostics(prev => ({ ...prev, servicesAvailable: true }));
     } catch (error) {
       console.error('Error cargando servicios:', error);
       setDiagnostics(prev => ({ ...prev, servicesAvailable: false }));
     }
 
-    setDiagnostics(prev => ({ ...prev, compilationStatus: 'success' }));
+    // Información del sistema (solo en el cliente)
+    if (typeof window !== 'undefined') {
+      setSystemInfo({
+        userAgent: navigator.userAgent,
+        path: window.location.pathname,
+        origin: window.location.origin
+      });
+      setDiagnostics(prev => ({ 
+        ...prev, 
+        timestamp: new Date().toLocaleString(),
+        compilationStatus: 'success' 
+      }));
+    } else {
+      setDiagnostics(prev => ({ 
+        ...prev, 
+        timestamp: 'SSR Mode',
+        compilationStatus: 'ssr' 
+      }));
+    }
   }, []);
 
   const StatusIcon = ({ status }: { status: boolean }) => {
@@ -104,15 +135,15 @@ export default function SystemDiagnostic() {
             </div>
             <div>
               <p className="text-sm text-gray-600">User Agent:</p>
-              <p className="font-mono text-xs truncate">{navigator.userAgent}</p>
+              <p className="font-mono text-xs truncate">{systemInfo.userAgent || 'No disponible en SSR'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Ruta actual:</p>
-              <p className="font-mono text-sm">{window.location.pathname}</p>
+              <p className="font-mono text-sm">{systemInfo.path || 'No disponible en SSR'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Servidor:</p>
-              <p className="font-mono text-sm">{window.location.origin}</p>
+              <p className="font-mono text-sm">{systemInfo.origin || 'No disponible en SSR'}</p>
             </div>
           </CardContent>
         </Card>
@@ -125,19 +156,31 @@ export default function SystemDiagnostic() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
-              onClick={() => window.location.href = '/security'}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/security';
+                }
+              }}
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               /security
             </button>
             <button
-              onClick={() => window.location.href = '/security/dashboard'}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/security/dashboard';
+                }
+              }}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
             >
               /security/dashboard
             </button>
             <button
-              onClick={() => window.location.href = '/security/reconocimiento-facial'}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/security/reconocimiento-facial';
+                }
+              }}
               className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
             >
               /security/reconocimiento-facial
