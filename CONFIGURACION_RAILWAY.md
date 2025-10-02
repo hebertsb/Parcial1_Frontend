@@ -9,8 +9,8 @@
 - `ws://127.0.0.1:8000/ws`
 
 **Ahora (Railway):**
-- `https://parcial1-backend.railway.app`
-- `wss://parcial1-backend.railway.app/ws`
+- `https://parcial1backend-production.up.railway.app`
+- `wss://parcial1backend-production.up.railway.app/ws`
 
 ### 🔧 **Archivos Modificados**
 
@@ -40,10 +40,10 @@
 
 | Servicio | Endpoint Anterior | Endpoint Actual |
 |----------|------------------|-----------------|
-| Dashboard | `http://127.0.0.1:8000/api/authz/seguridad/dashboard/` | `https://parcial1-backend.railway.app/api/authz/seguridad/dashboard/` |
-| Logs de Acceso | `http://127.0.0.1:8000/api/authz/seguridad/acceso/logs/` | `https://parcial1-backend.railway.app/api/authz/seguridad/acceso/logs/` |
-| Usuarios | `http://127.0.0.1:8000/api/authz/usuarios/` | `https://parcial1-backend.railway.app/api/authz/usuarios/` |
-| Actividad | `http://127.0.0.1:8000/api/seguridad/actividad/reciente/` | `https://parcial1-backend.railway.app/api/seguridad/actividad/reciente/` |
+| Dashboard | `http://127.0.0.1:8000/api/authz/seguridad/dashboard/` | `https://parcial1backend-production.up.railway.app/api/authz/seguridad/dashboard/` |
+| Logs de Acceso | `http://127.0.0.1:8000/api/authz/seguridad/acceso/logs/` | `https://parcial1backend-production.up.railway.app/api/authz/seguridad/acceso/logs/` |
+| Usuarios | `http://127.0.0.1:8000/api/authz/usuarios/` | `https://parcial1backend-production.up.railway.app/api/authz/usuarios/` |
+| Actividad | `http://127.0.0.1:8000/api/seguridad/actividad/reciente/` | `https://parcial1backend-production.up.railway.app/api/seguridad/actividad/reciente/` |
 
 ### 🔒 **Configuración de Seguridad**
 
@@ -56,8 +56,8 @@
 
 ```bash
 # Producción (Railway)
-NEXT_PUBLIC_API_URL=https://parcial1-backend.railway.app
-NEXT_PUBLIC_WS_URL=wss://parcial1-backend.railway.app/ws
+NEXT_PUBLIC_API_URL=https://parcial1backend-production.up.railway.app
+NEXT_PUBLIC_WS_URL=wss://parcial1backend-production.up.railway.app/ws
 NEXT_PUBLIC_ENVIRONMENT=production
 NEXT_PUBLIC_SECURE_COOKIES=true
 ```
@@ -97,7 +97,7 @@ npm run dev
 npm run build
 
 # Probar conexión a Railway
-curl https://parcial1-backend.railway.app/api/health/
+curl https://parcial1backend-production.up.railway.app/api/health/
 ```
 
 ## 🎯 **Estado Actual**

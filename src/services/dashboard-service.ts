@@ -32,7 +32,7 @@ interface Incidente {
 }
 
 export class DashboardService {
-  private static baseUrl = 'https://parcial1-backend.railway.app';
+  private static baseUrl = 'https://parcial1backend-production.up.railway.app';
   
   private static getAuthHeaders() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;

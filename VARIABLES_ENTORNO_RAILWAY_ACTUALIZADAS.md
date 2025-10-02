@@ -11,10 +11,10 @@ NEXT_PUBLIC_WS_URL=ws://127.0.0.1:8000/ws
 NEXT_PUBLIC_WEBRTC_URL=http://127.0.0.1:8000
 
 # AHORA
-REACT_APP_API_URL=https://parcial1-backend.railway.app/api
-NEXT_PUBLIC_API_URL=https://parcial1-backend.railway.app
-NEXT_PUBLIC_WS_URL=wss://parcial1-backend.railway.app/ws
-NEXT_PUBLIC_WEBRTC_URL=https://parcial1-backend.railway.app
+REACT_APP_API_URL=https://parcial1backend-production.up.railway.app/api
+NEXT_PUBLIC_API_URL=https://parcial1backend-production.up.railway.app
+NEXT_PUBLIC_WS_URL=wss://parcial1backend-production.up.railway.app/ws
+NEXT_PUBLIC_WEBRTC_URL=https://parcial1backend-production.up.railway.app
 ```
 
 ### 2. **`.env`** (Base)
@@ -25,16 +25,16 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_WEBRTC_URL=http://127.0.0.1:8000
 
 # AHORA
-REACT_APP_API_URL=https://parcial1-backend.railway.app/api
-NEXT_PUBLIC_API_URL=https://parcial1-backend.railway.app
-NEXT_PUBLIC_WEBRTC_URL=https://parcial1-backend.railway.app
-NEXT_PUBLIC_WS_URL=wss://parcial1-backend.railway.app/ws
+REACT_APP_API_URL=https://parcial1backend-production.up.railway.app/api
+NEXT_PUBLIC_API_URL=https://parcial1backend-production.up.railway.app
+NEXT_PUBLIC_WEBRTC_URL=https://parcial1backend-production.up.railway.app
+NEXT_PUBLIC_WS_URL=wss://parcial1backend-production.up.railway.app/ws
 ```
 
 ### 3. **`.env.production`** (Creado)
 ```bash
 # Variables específicas para producción
-NEXT_PUBLIC_API_URL=https://parcial1-backend.railway.app
+NEXT_PUBLIC_API_URL=https://parcial1backend-production.up.railway.app
 NEXT_PUBLIC_SECURE_COOKIES=true
 NEXT_PUBLIC_ENVIRONMENT=production
 ```
@@ -49,9 +49,9 @@ NEXT_PUBLIC_ENVIRONMENT=production
 
 | Servicio | URL |
 |----------|-----|
-| **API Base** | `https://parcial1-backend.railway.app` |
-| **WebSocket** | `wss://parcial1-backend.railway.app/ws` |
-| **WebRTC** | `https://parcial1-backend.railway.app` |
+| **API Base** | `https://parcial1backend-production.up.railway.app` |
+| **WebSocket** | `wss://parcial1backend-production.up.railway.app/ws` |
+| **WebRTC** | `https://parcial1backend-production.up.railway.app` |
 
 ## 🎯 Próximos Pasos
 

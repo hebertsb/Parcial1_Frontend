@@ -67,7 +67,7 @@ export default function ActividadPage() {
       console.log('📋 Cargando actividad desde el backend...');
       
       // 1. Obtener logs de acceso
-      const logsResponse = await fetch('https://parcial1-backend.railway.app/api/authz/seguridad/acceso/logs/?limit=50', {
+      const logsResponse = await fetch('https://parcial1backend-production.up.railway.app/api/authz/seguridad/acceso/logs/?limit=50', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
           'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ export default function ActividadPage() {
         console.log('⚠️ Intentando endpoint alternativo de actividad...');
         
         // 2. Intentar endpoint alternativo
-        const actResponse = await fetch('https://parcial1-backend.railway.app/api/seguridad/actividad/reciente/?limit=50', {
+        const actResponse = await fetch('https://parcial1backend-production.up.railway.app/api/seguridad/actividad/reciente/?limit=50', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
             'Content-Type': 'application/json',
